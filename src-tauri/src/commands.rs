@@ -366,18 +366,64 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
         tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
         std::process::exit(0);
     } else {
-        // Remove Gatekeeper quarantine flag so macOS doesn't say "damaged"
+        println!("[Updater] Silently mounting and installing DMG to /Applications in background...");
+
+        let mount_point = "/tmp/ZeroTraceUpdateMount";
+        let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
+        let _ = std::fs::create_dir_all(mount_point);
+
+        // 1. Mount DMG silently without Finder popup
+        let mount_res = std::process::Command::new("hdiutil")
+            .args(&[
+                "attach",
+                "-nobrowse",
+                "-readonly",
+                installer_path.to_str().unwrap(),
+                "-mountpoint",
+                mount_point,
+            ])
+            .output()
+            .map_err(|e| format!("Failed to mount DMG: {}", e))?;
+
+        if !mount_res.status.success() {
+            let err = String::from_utf8_lossy(&mount_res.stderr);
+            return Err(format!("Failed to mount DMG: {}", err));
+        }
+
+        // 2. In-place replace /Applications/ZeroTrace.app
+        let source_app = format!("{}/ZeroTrace.app", mount_point);
+        let target_app = "/Applications/ZeroTrace.app";
+
+        let _ = std::process::Command::new("rm").args(&["-rf", target_app]).output();
+        let copy_res = std::process::Command::new("cp")
+            .args(&["-R", &source_app, "/Applications/"])
+            .output()
+            .map_err(|e| format!("Failed to copy updated app: {}", e))?;
+
+        if !copy_res.status.success() {
+            let err = String::from_utf8_lossy(&copy_res.stderr);
+            let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
+            return Err(format!("Failed to install app to /Applications: {}", err));
+        }
+
+        // 3. Clear quarantine so Gatekeeper will never ask "Open Anyway" or "damaged"
         let _ = std::process::Command::new("xattr")
-            .args(&["-cr", installer_path.to_str().unwrap()])
+            .args(&["-cr", target_app])
             .output();
 
-        // Mount and open DMG directly without browser
-        std::process::Command::new("open")
-            .arg(&installer_path)
-            .spawn()
-            .map_err(|e| format!("Failed to open DMG: {}", e))?;
+        // 4. Detach DMG and cleanup temp files
+        let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
+        let _ = std::fs::remove_dir_all(mount_point);
+        let _ = std::fs::remove_file(&installer_path);
+
+        // 5. Relaunch new version of ZeroTrace and exit old process
+        println!("[Updater] Relaunching /Applications/ZeroTrace.app...");
+        let _ = std::process::Command::new("open").arg(target_app).spawn();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+        std::process::exit(0);
     }
 
-    Ok("Installer launched successfully".to_string())
+    Ok("Update installed and application restarted".to_string())
 }
 
