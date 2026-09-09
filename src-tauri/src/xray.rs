@@ -474,38 +474,64 @@ impl XrayProcess {
         std::fs::write(&config_path, config_json).map_err(|e| e.to_string())?;
         self.config_file_path = Some(config_path.clone());
 
-        // Find xray binary: 1) sidecar in binaries/, 2) in system PATH
+        // Find xray binary across all potential install and development directories
         let binary_name = if cfg!(windows) { "xray.exe" } else { "xray" };
-        let candidate_paths = [
-            app_dir.join("binaries").join(binary_name),
-            app_dir.join(binary_name),
-            PathBuf::from("binaries").join(binary_name),
-            PathBuf::from("src-tauri").join("binaries").join(binary_name),
-            std::env::current_dir().map(|d| d.join("src-tauri").join("binaries").join(binary_name)).unwrap_or_default(),
-            std::env::current_dir().map(|d| d.join("binaries").join(binary_name)).unwrap_or_default(),
-            std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(binary_name))).unwrap_or_default(),
-            std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("binaries").join(binary_name))).unwrap_or_default(),
-        ];
+        let mut candidate_paths: Vec<PathBuf> = Vec::new();
 
-        let binary_to_run = candidate_paths
-            .into_iter()
-            .find(|p| p.exists() && p.is_file())
-            .unwrap_or_else(|| PathBuf::from(binary_name));
+        // 1. Current executable directory and its resource bundles
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                candidate_paths.push(exe_dir.join(binary_name));
+                candidate_paths.push(exe_dir.join("binaries").join(binary_name));
+                candidate_paths.push(exe_dir.join("resources").join(binary_name));
+                candidate_paths.push(exe_dir.join("resources").join("binaries").join(binary_name));
+                candidate_paths.push(exe_dir.join("_up_").join("binaries").join(binary_name));
+                if let Some(parent_dir) = exe_dir.parent() {
+                    candidate_paths.push(parent_dir.join("resources").join(binary_name));
+                    candidate_paths.push(parent_dir.join("resources").join("binaries").join(binary_name));
+                    candidate_paths.push(parent_dir.join("Resources").join("binaries").join(binary_name));
+                }
+            }
+        }
 
-        match Command::new(&binary_to_run)
-            .arg("run")
-            .arg("-config")
-            .arg(&config_path)
-            .spawn()
+        // 2. Application data directory
+        candidate_paths.push(app_dir.join("binaries").join(binary_name));
+        candidate_paths.push(app_dir.join(binary_name));
+
+        // 3. Current working directory (development mode)
+        if let Ok(cwd) = std::env::current_dir() {
+            candidate_paths.push(cwd.join("binaries").join(binary_name));
+            candidate_paths.push(cwd.join("src-tauri").join("binaries").join(binary_name));
+            candidate_paths.push(cwd.join("target").join("debug").join(binary_name));
+            candidate_paths.push(cwd.join("target").join("release").join(binary_name));
+        }
+
+        let found_binary = candidate_paths.iter().find(|p| p.exists() && p.is_file()).cloned();
+        let binary_to_run = found_binary.unwrap_or_else(|| PathBuf::from(binary_name));
+
+        println!("[XrayProcess] Starting Xray core from: {:?}", binary_to_run);
+
+        let mut cmd = Command::new(&binary_to_run);
+        cmd.arg("run").arg("-config").arg(&config_path);
+
+        #[cfg(windows)]
         {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        match cmd.spawn() {
             Ok(child) => {
                 self.child = Some(child);
+                println!("[XrayProcess] Xray runtime engine spawned successfully (PID: {:?})", self.child.as_ref().map(|c| c.id()));
                 Ok(())
             }
             Err(e) => {
-                // If binary not found yet in development, log and simulate process for testing
-                eprintln!("[XrayProcess] Note: `{}` not found in PATH or binaries/ ({}). Running in virtual bridge mode.", binary_name, e);
-                Ok(())
+                // If binary not found, return explicit error for UI diagnostics
+                let err_msg = format!("Failed to spawn Xray core `{}` at {:?}: {}", binary_name, binary_to_run, e);
+                eprintln!("[XrayProcess] {}", err_msg);
+                Err(err_msg)
             }
         }
     }
