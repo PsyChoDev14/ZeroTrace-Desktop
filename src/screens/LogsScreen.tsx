@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Terminal, Trash2, Copy, Check, ArrowLeft, Download, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Terminal, Trash2, Copy, Check, ArrowLeft, Download, MessageCircle, RefreshCw } from 'lucide-react';
 import { DiagnosticLog } from '../types';
 import { api, openExternalUrl } from '../utils/tauriBridge';
 
@@ -9,19 +9,72 @@ interface LogsScreenProps {
   onBack: () => void;
 }
 
-export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack }) => {
+export const LogsScreen: React.FC<LogsScreenProps> = ({ logs: initialLogs, onClear, onBack }) => {
+  const [liveLogs, setLiveLogs] = useState<DiagnosticLog[]>(initialLogs);
   const [copied, setCopied] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [isSending, setIsSending] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
 
-  const filteredLogs = logs.filter(l => filterLevel === 'ALL' || l.level === filterLevel);
+  // Sync with prop when it changes
+  useEffect(() => {
+    if (initialLogs && initialLogs.length > 0) {
+      setLiveLogs(initialLogs);
+    }
+  }, [initialLogs]);
+
+  // Real-time live log polling (every 1000ms while screen is mounted)
+  const pollLogs = useCallback(async () => {
+    try {
+      const fresh = await api.getLogs();
+      if (fresh) {
+        setLiveLogs(prev => {
+          // Micro-optimization: skip state update if log list hasn't changed
+          if (
+            prev.length === fresh.length &&
+            prev[prev.length - 1]?.timestamp === fresh[fresh.length - 1]?.timestamp
+          ) {
+            return prev;
+          }
+          return fresh;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to poll logs:', err);
+    }
+  }, []);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await pollLogs();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  useEffect(() => {
+    pollLogs();
+    const interval = setInterval(pollLogs, 1000);
+    return () => clearInterval(interval);
+  }, [pollLogs]);
+
+  // Auto-scroll to latest log entry
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [liveLogs.length]);
+
+  const filteredLogs = liveLogs.filter(l => filterLevel === 'ALL' || l.level === filterLevel);
 
   const handleCopy = () => {
-    const text = logs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n');
+    const text = liveLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClear = () => {
+    onClear();
+    setLiveLogs([]);
   };
 
   const handleSendToSupport = async () => {
@@ -71,7 +124,7 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
 
   return (
     <div className="flex-1 flex flex-col p-4 max-w-sm mx-auto w-full overflow-hidden">
-      {/* 1. Top Header Row: Back button & Title */}
+      {/* 1. Top Header Row: Back button & Title with Live Badge */}
       <div className="flex items-center gap-2.5 pb-2.5 border-b border-zt-border shrink-0">
         <button
           onClick={onBack}
@@ -81,22 +134,28 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
           <ArrowLeft size={16} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-bold text-zt-text flex items-center gap-1.5 truncate">
-            <Terminal size={16} className="text-zt-accent shrink-0" />
-            <span>Diagnostics & Core Logs</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-bold text-zt-text flex items-center gap-1.5 truncate">
+              <Terminal size={16} className="text-zt-accent shrink-0" />
+              <span>Diagnostics & Core Logs</span>
+            </h1>
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-mono shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>LIVE</span>
+            </div>
+          </div>
           <p className="text-[10px] text-zt-text-muted truncate">Real-time engine events & connection diagnostics</p>
         </div>
       </div>
 
       {/* 2. Compact Action Toolbar */}
       <div className="space-y-2 my-2.5 shrink-0">
-        {/* Row 1: Filter, Copy, Clear */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Row 1: Filter, Refresh, Copy, Clear */}
+        <div className="flex items-center justify-between gap-1.5">
           <select
             value={filterLevel}
             onChange={e => setFilterLevel(e.target.value)}
-            className="flex-1 rounded-xl bg-zt-surface border border-zt-border px-2.5 py-1.5 text-xs font-mono text-zt-text focus:outline-none cursor-pointer"
+            className="flex-1 min-w-0 rounded-xl bg-zt-surface border border-zt-border px-2 py-1.5 text-xs font-mono text-zt-text focus:outline-none cursor-pointer truncate"
           >
             <option value="ALL">All Levels</option>
             <option value="INFO">INFO</option>
@@ -106,18 +165,28 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
           </select>
 
           <button
-            onClick={handleCopy}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:border-zt-border-strong text-xs font-semibold text-zt-text transition-colors shrink-0 cursor-pointer active:scale-95"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:border-zt-border-strong text-xs font-semibold text-zt-text transition-colors shrink-0 cursor-pointer active:scale-95"
+            title="Refresh logs immediately"
           >
-            {copied ? <Check size={13} className="text-zt-success" /> : <Copy size={13} />}
+            <RefreshCw size={12} className={isRefreshing ? 'animate-spin text-zt-accent' : ''} />
+            <span>Fetch</span>
+          </button>
+
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:border-zt-border-strong text-xs font-semibold text-zt-text transition-colors shrink-0 cursor-pointer active:scale-95"
+          >
+            {copied ? <Check size={12} className="text-zt-success" /> : <Copy size={12} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
           <button
-            onClick={onClear}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:text-zt-danger hover:border-zt-danger/40 text-xs font-semibold text-zt-text-muted transition-colors shrink-0 cursor-pointer active:scale-95"
+            onClick={handleClear}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:text-zt-danger hover:border-zt-danger/40 text-xs font-semibold text-zt-text-muted transition-colors shrink-0 cursor-pointer active:scale-95"
           >
-            <Trash2 size={13} />
+            <Trash2 size={12} />
             <span>Clear</span>
           </button>
         </div>
@@ -155,22 +224,25 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
       {/* 3. Terminal Viewport */}
       <div className="flex-1 p-3 rounded-2xl bg-zt-bg-elevated border border-zt-border font-mono text-[10.5px] overflow-y-auto space-y-1.5 select-text shadow-inner">
         {filteredLogs.length > 0 ? (
-          filteredLogs.map((log, i) => (
-            <div key={i} className="flex items-start gap-1.5 leading-relaxed">
-              <span className="text-zt-text-faint shrink-0 text-[10px]">
-                {new Date(log.timestamp).toLocaleTimeString()}
-              </span>
-              <span className={`px-1 rounded text-[8.5px] font-bold border uppercase shrink-0 ${getLevelBadge(log.level)}`}>
-                {log.level}
-              </span>
-              <span className="text-zt-accent font-semibold shrink-0 text-[10px]">
-                [{log.tag}]
-              </span>
-              <span className="text-zt-text break-words">
-                {log.message}
-              </span>
-            </div>
-          ))
+          <>
+            {filteredLogs.map((log, i) => (
+              <div key={i} className="flex items-start gap-1.5 leading-relaxed">
+                <span className="text-zt-text-faint shrink-0 text-[10px]">
+                  {new Date(log.timestamp).toLocaleTimeString()}
+                </span>
+                <span className={`px-1 rounded text-[8.5px] font-bold border uppercase shrink-0 ${getLevelBadge(log.level)}`}>
+                  {log.level}
+                </span>
+                <span className="text-zt-accent font-semibold shrink-0 text-[10px]">
+                  [{log.tag}]
+                </span>
+                <span className="text-zt-text break-words">
+                  {log.message}
+                </span>
+              </div>
+            ))}
+            <div ref={terminalEndRef} />
+          </>
         ) : (
           <div className="h-full flex items-center justify-center text-zt-text-faint text-xs">
             <span>No log entries recorded.</span>

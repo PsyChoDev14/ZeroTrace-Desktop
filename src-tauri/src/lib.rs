@@ -35,6 +35,9 @@ pub fn run() {
                 selected_id = Some(configs[0].id.clone());
             }
 
+            // Clean up any stale system proxy leftover from a previous crash or sudden reboot
+            TunManager::cleanup_stale_proxies();
+
             let initial_context = AppContext {
                 vpn_state: VpnState {
                     status: "disconnected".to_string(),
@@ -47,12 +50,13 @@ pub fn run() {
                 selected_id,
                 settings,
                 traffic_stats: TrafficStats::default(),
+                last_stats_poll: None,
                 logs: vec![
                     DiagnosticLog {
                         timestamp: chrono::Utc::now().to_rfc3339(),
                         level: "INFO".to_string(),
                         tag: "ZeroTrace-Core".to_string(),
-                        message: "Desktop PC Engine initialized. Wintun L3 subsystem ready.".to_string(),
+                        message: "Desktop PC Engine initialized. High-performance proxy pipeline ready.".to_string(),
                     },
                 ],
                 tun_manager: TunManager::new(),

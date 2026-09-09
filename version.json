@@ -1,18 +1,18 @@
 {
-  "version": "1.0.10",
-  "versionCode": 10,
+  "version": "1.1.0",
+  "versionCode": 11,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Fix Windows proxy tunnel connection and startup crash",
-    "Xray core verifyPeerCertByName support for bug-hosts and carrier SNI tweaks",
-    "1-Click Diagnostic Report exporter: capture real-time engine logs and send directly to WhatsApp support (+94 78 838 5465)",
-    "Sanitize deprecated allowInsecure flags in custom JSON configs",
-    "Real-time Xray core stdout/stderr event logging"
+    "Live Real-Time Diagnostic Logging: auto-streaming logs with instant UI refresh and 1000ms polling",
+    "Gigabit engine throughput: 4MB policy buffers, TCP keepalive, and low-latency dialing",
+    "Non-blocking asynchronous ping & DNS engine with IPv4 prioritization",
+    "Enhanced Windows & macOS system proxy validation with registry exit status checks",
+    "Diagnostic report includes live system proxy verification and up to 200 event records"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.10/ZeroTrace_1.0.10_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.0/ZeroTrace_1.1.0_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.10/ZeroTrace_1.0.10_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.0/ZeroTrace_1.1.0_aarch64.dmg"
   }
 }

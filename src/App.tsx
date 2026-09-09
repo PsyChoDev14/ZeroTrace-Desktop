@@ -169,11 +169,14 @@ export function App() {
     if (vpnState.status === 'connected') {
       await api.disconnect();
       setVpnState({ status: 'stopping' });
+      api.getLogs().then(l => l && setLogs(l));
     } else {
       if (!selectedId && configs.length > 0) {
         await api.connect(configs[0].id);
+        api.getLogs().then(l => l && setLogs(l));
       } else if (selectedId) {
         await api.connect(selectedId);
+        api.getLogs().then(l => l && setLogs(l));
       } else {
         setIsAddOpen(true);
       }
@@ -216,7 +219,13 @@ export function App() {
     setLogs([]);
   }, []);
 
-  const handleOpenLogs = useCallback(() => {
+  const handleOpenLogs = useCallback(async () => {
+    try {
+      const freshLogs = await api.getLogs();
+      if (freshLogs) setLogs(freshLogs);
+    } catch (e) {
+      console.error('Failed to load logs on open:', e);
+    }
     setCurrentTab(prev => {
       if (prev !== 'logs') {
         setPreviousTab(prev);

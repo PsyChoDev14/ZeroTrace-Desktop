@@ -1,6 +1,6 @@
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::SocketAddr;
 use std::time::{Duration, Instant};
-use tokio::net::TcpStream;
+use tokio::net::{lookup_host, TcpStream};
 use tokio::time::timeout;
 
 pub struct PingEngine;
@@ -8,7 +8,7 @@ pub struct PingEngine;
 impl PingEngine {
     pub async fn test_latency(host: &str, port: u16, timeout_ms: u64) -> i64 {
         let addr_str = format!("{}:{}", host, port);
-        let socket_addrs: Vec<SocketAddr> = match addr_str.to_socket_addrs() {
+        let mut socket_addrs: Vec<SocketAddr> = match lookup_host(&addr_str).await {
             Ok(addrs) => addrs.collect(),
             Err(_) => return -1,
         };
@@ -16,6 +16,9 @@ impl PingEngine {
         if socket_addrs.is_empty() {
             return -1;
         }
+
+        // Prioritize IPv4 to eliminate long dual-stack IPv6 timeout hangs on cellular/ISP networks
+        socket_addrs.sort_by_key(|a| if a.is_ipv4() { 0 } else { 1 });
 
         let start = Instant::now();
         let connect_fut = TcpStream::connect(&socket_addrs[0]);

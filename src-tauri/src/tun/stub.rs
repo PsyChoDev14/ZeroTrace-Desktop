@@ -46,6 +46,20 @@ impl StubTunManager {
             .args(&["-setsecurewebproxystate", &service, "on"])
             .output();
 
+        // 3. Configure LAN and local bypass domains
+        let _ = Command::new("networksetup")
+            .args(&[
+                "-setproxybypassdomains",
+                &service,
+                "127.0.0.1",
+                "localhost",
+                "10.0.0.0/8",
+                "172.16.0.0/12",
+                "192.168.0.0/16",
+                "*.local",
+            ])
+            .output();
+
         self.active_service = Some(service.clone());
         self.is_active.store(true, Ordering::SeqCst);
         println!("[StubTunManager] macOS system proxy active! Traffic routed via Xray tunnel (Server: {}).", server_host);
@@ -59,6 +73,7 @@ impl StubTunManager {
                 let _ = Command::new("networksetup").args(&["-setsocksfirewallproxystate", service, "off"]).output();
                 let _ = Command::new("networksetup").args(&["-setwebproxystate", service, "off"]).output();
                 let _ = Command::new("networksetup").args(&["-setsecurewebproxystate", service, "off"]).output();
+                let _ = Command::new("networksetup").args(&["-setproxybypassdomains", service, "empty"]).output();
                 println!("[StubTunManager] macOS system proxy disabled. Direct connection restored.");
             }
         }
@@ -68,22 +83,68 @@ impl StubTunManager {
         self.is_active.load(Ordering::SeqCst)
     }
 
-    fn get_active_mac_service() -> Option<String> {
-        let output = Command::new("networksetup")
-            .args(&["-listnetworkserviceorder"])
-            .output()
-            .ok()?;
-        let text = String::from_utf8_lossy(&output.stdout);
+    pub fn cleanup_stale_proxies() {
+        if let Some(service) = Self::get_active_mac_service() {
+            println!("[StubTunManager] Checking and cleaning stale macOS system proxy for '{}' on startup...", service);
+            let _ = Command::new("networksetup").args(&["-setsocksfirewallproxystate", &service, "off"]).output();
+            let _ = Command::new("networksetup").args(&["-setwebproxystate", &service, "off"]).output();
+            let _ = Command::new("networksetup").args(&["-setsecurewebproxystate", &service, "off"]).output();
+            let _ = Command::new("networksetup").args(&["-setproxybypassdomains", &service, "empty"]).output();
+        }
+    }
 
-        for line in text.lines() {
-            let trimmed = line.trim();
-            if trimmed.starts_with('(') && trimmed.contains("Wi-Fi") {
-                return Some("Wi-Fi".to_string());
+    fn get_active_mac_service() -> Option<String> {
+        // 1. Try to detect the default interface from active OS routing table (e.g. "en0")
+        let default_device = Command::new("route")
+            .args(&["-n", "get", "default"])
+            .output()
+            .ok()
+            .and_then(|output| {
+                let text = String::from_utf8_lossy(&output.stdout);
+                for line in text.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("interface:") {
+                        return trimmed.split_whitespace().nth(1).map(|s| s.to_string());
+                    }
+                }
+                None
+            });
+
+        // 2. Map default device to the corresponding macOS network service name
+        if let Ok(output) = Command::new("networksetup").args(&["-listnetworkserviceorder"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let mut current_service: Option<String> = None;
+
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with('(') && trimmed.contains(')') {
+                    if let Some(start) = trimmed.find(' ') {
+                        let name = trimmed[start + 1..].trim();
+                        current_service = Some(name.to_string());
+                    }
+                } else if trimmed.starts_with("(Hardware Port:") {
+                    if let Some(ref dev) = default_device {
+                        if trimmed.contains(&format!("Device: {})", dev)) || trimmed.contains(&format!("Device: {}", dev)) {
+                            if let Some(service) = current_service {
+                                return Some(service);
+                            }
+                        }
+                    }
+                }
             }
-            if trimmed.starts_with('(') && trimmed.contains("Ethernet") {
-                return Some("Ethernet".to_string());
+
+            // Fallback: check Wi-Fi or Ethernet
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with('(') && trimmed.contains("Wi-Fi") {
+                    return Some("Wi-Fi".to_string());
+                }
+                if trimmed.starts_with('(') && trimmed.contains("Ethernet") {
+                    return Some("Ethernet".to_string());
+                }
             }
         }
+
         Some("Wi-Fi".to_string())
     }
 }

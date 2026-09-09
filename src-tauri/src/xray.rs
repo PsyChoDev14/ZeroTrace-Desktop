@@ -21,7 +21,8 @@ impl XrayConfigGenerator {
         }
 
         let is_dpi_fragment_active = settings.dpi_bypass_mode != DpiBypassMode::Off;
-        let is_mux_active = settings.mux_enabled || settings.dpi_bypass_mode == DpiBypassMode::DeepStealth;
+        let has_vision = config.flow.to_lowercase().contains("vision");
+        let is_mux_active = (settings.mux_enabled || settings.dpi_bypass_mode == DpiBypassMode::DeepStealth) && !has_vision;
 
         let effective_packets = match settings.dpi_bypass_mode {
             DpiBypassMode::SmartFragment => "tlshello",
@@ -36,28 +37,37 @@ impl XrayConfigGenerator {
             DpiBypassMode::Off => "",
         };
         let effective_interval = match settings.dpi_bypass_mode {
-            DpiBypassMode::SmartFragment => "10-20",
+            DpiBypassMode::SmartFragment => "2-8",
             DpiBypassMode::DeepStealth => "5-10",
             DpiBypassMode::Custom => &settings.fragment_interval,
             DpiBypassMode::Off => "",
         };
 
-        // 1. Log
+        // 1. Log (stream both access and error events to stdout/stderr for real-time diagnostics)
         let log = json!({
+            "access": "",
+            "error": "",
             "loglevel": "debug"
         });
 
-        // 2. Policy
+        // 2. High-Performance Policy (4MB buffer, fast zombie socket reclamation)
         let policy = json!({
             "levels": {
                 "0": {
                     "handshake": 4,
-                    "connIdle": 300
+                    "connIdle": 120,
+                    "uplinkOnly": 2,
+                    "downlinkOnly": 4,
+                    "bufferSize": 4096
                 }
+            },
+            "system": {
+                "statsInboundUplink": true,
+                "statsInboundDownlink": true
             }
         });
 
-        // 3. Inbounds (Local SOCKS5, HTTP, and Windows Wintun TUN)
+        // 3. Inbounds (Local SOCKS5 on 10808 and Local HTTP on 10809 with TLS/HTTP sniffing)
         #[allow(unused_mut)]
         let mut inbounds = vec![
             json!({
@@ -79,7 +89,12 @@ impl XrayConfigGenerator {
                 "tag": "http-in",
                 "port": http_port,
                 "listen": "127.0.0.1",
-                "protocol": "http"
+                "protocol": "http",
+                "sniffing": {
+                    "enabled": true,
+                    "routeOnly": true,
+                    "destOverride": ["http", "tls"]
+                }
             })
         ];
 
@@ -114,6 +129,7 @@ impl XrayConfigGenerator {
                         "tcpNoDelay": true,
                         "tcpFastOpen": true,
                         "tcpKeepAlivePeriod": 15,
+                        "tcpKeepAliveInterval": 15,
                         "tcpCongestion": "bbr"
                     }
                 }
@@ -130,7 +146,9 @@ impl XrayConfigGenerator {
             "streamSettings": {
                 "sockopt": {
                     "tcpNoDelay": true,
-                    "tcpKeepAlivePeriod": 15
+                    "tcpFastOpen": true,
+                    "tcpKeepAlivePeriod": 15,
+                    "tcpKeepAliveInterval": 15
                 }
             }
         }));
@@ -251,7 +269,7 @@ impl XrayConfigGenerator {
         }));
 
         let routing = json!({
-            "domainStrategy": "AsIs",
+            "domainStrategy": "IPIfNonMatch",
             "rules": rules
         });
 
@@ -295,7 +313,10 @@ impl XrayConfigGenerator {
                     "id": config.uuid,
                     "encryption": "none"
                 });
-                if !config.flow.is_empty() {
+                // XTLS Vision is strictly valid for raw TCP + TLS/Reality streams
+                let is_tcp = config.network.is_empty() || config.network.eq_ignore_ascii_case("tcp");
+                let is_tls_or_reality = config.security.eq_ignore_ascii_case("tls") || config.security.eq_ignore_ascii_case("reality");
+                if !config.flow.is_empty() && is_tcp && is_tls_or_reality {
                     user["flow"] = json!(config.flow);
                 }
 
@@ -463,7 +484,9 @@ impl XrayConfigGenerator {
         // Socket options
         let mut sockopt = json!({
             "tcpNoDelay": true,
-            "tcpKeepAlivePeriod": 15
+            "tcpFastOpen": true,
+            "tcpKeepAlivePeriod": 15,
+            "tcpKeepAliveInterval": 15
         });
         if is_dpi_fragment_active {
             sockopt["dialerProxy"] = json!("fragment");
@@ -681,11 +704,16 @@ mod tests {
         assert_eq!(inbounds[0]["port"], 10808);
         assert_eq!(inbounds[1]["tag"], "http-in");
         assert_eq!(inbounds[1]["port"], 10809);
+        assert_eq!(inbounds[1]["sniffing"]["enabled"], true);
+
+        // Verify Policy Buffer Size
+        assert_eq!(root["policy"]["levels"]["0"]["bufferSize"], 4096);
 
         // Verify Outbounds
         let outbounds = root["outbounds"].as_array().expect("outbounds array");
         assert_eq!(outbounds[0]["tag"], "proxy");
         assert_eq!(outbounds[0]["protocol"], "vless");
+        assert_eq!(outbounds[0]["streamSettings"]["sockopt"]["tcpFastOpen"], true);
 
         // Verify Reality settings
         let reality = &outbounds[0]["streamSettings"]["realitySettings"];
@@ -702,6 +730,7 @@ mod tests {
         assert_eq!(dns_servers[0], "94.140.14.14");
 
         // Verify Routing
+        assert_eq!(root["routing"]["domainStrategy"], "IPIfNonMatch");
         let rules = root["routing"]["rules"].as_array().expect("rules");
         assert!(rules.len() >= 5);
     }
