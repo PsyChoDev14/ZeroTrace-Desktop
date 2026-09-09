@@ -20,24 +20,19 @@ impl SingboxConfigGenerator {
             "94.140.14.14"
         };
 
-        // 1. DNS Configuration
+        // 1. DNS Configuration (sing-box 1.14+ format)
         let dns = json!({
             "servers": [
                 {
+                    "type": "udp",
                     "tag": "dns-remote",
-                    "address": primary_dns,
+                    "server": primary_dns,
                     "detour": "proxy"
                 },
                 {
+                    "type": "local",
                     "tag": "dns-direct",
-                    "address": "local",
                     "detour": "direct"
-                }
-            ],
-            "rules": [
-                {
-                    "outbound": ["any"],
-                    "server": "dns-direct"
                 }
             ],
             "strategy": "ipv4_only"
@@ -49,7 +44,9 @@ impl SingboxConfigGenerator {
                 "type": "tun",
                 "tag": "tun-in",
                 "interface_name": "ZeroTrace",
-                "inet4_address": "172.19.0.1/30",
+                "address": [
+                    "172.19.0.1/30"
+                ],
                 "auto_route": true,
                 "strict_route": true,
                 "stack": "mixed",
@@ -68,15 +65,14 @@ impl SingboxConfigGenerator {
         let outbounds = vec![
             proxy_outbound,
             json!({ "type": "direct", "tag": "direct" }),
-            json!({ "type": "dns", "tag": "dns-out" }),
             json!({ "type": "block", "tag": "block" })
         ];
 
-        // 4. Routing rules
+        // 4. Routing rules (sing-box 1.14+ format)
         let mut route_rules = vec![
             json!({
-                "protocol": "dns",
-                "outbound": "dns-out"
+                "action": "hijack-dns",
+                "protocol": "dns"
             })
         ];
 
@@ -97,6 +93,7 @@ impl SingboxConfigGenerator {
         }
 
         let route = json!({
+            "default_domain_resolver": "dns-direct",
             "rules": route_rules,
             "auto_detect_interface": true
         });
@@ -357,14 +354,26 @@ mod tests {
 
         let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
 
+        // Verify DNS (sing-box 1.14+ format)
+        let dns = &root["dns"];
+        assert_eq!(dns["servers"][0]["type"], "udp");
+        assert_eq!(dns["servers"][0]["server"], "94.140.14.14");
+        assert_eq!(dns["servers"][1]["type"], "local");
+
         // Verify Inbounds
         let inbounds = root["inbounds"].as_array().expect("inbounds array");
         assert_eq!(inbounds[0]["type"], "tun");
         assert_eq!(inbounds[0]["stack"], "mixed");
+        assert_eq!(inbounds[0]["address"][0], "172.19.0.1/30");
         assert_eq!(inbounds[0]["auto_route"], true);
         assert_eq!(inbounds[0]["strict_route"], true);
         assert_eq!(inbounds[1]["type"], "mixed");
         assert_eq!(inbounds[1]["listen_port"], 10808);
+
+        // Verify Route (sing-box 1.14+ format)
+        let route = &root["route"];
+        assert_eq!(route["default_domain_resolver"], "dns-direct");
+        assert_eq!(route["rules"][0]["action"], "hijack-dns");
 
         // Verify Outbound
         let outbounds = root["outbounds"].as_array().expect("outbounds array");

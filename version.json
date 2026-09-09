@@ -1,18 +1,18 @@
 {
-  "version": "1.3.0",
-  "versionCode": 17,
+  "version": "1.3.1",
+  "versionCode": 18,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Integrated Sing-box v1.14.0 Core for native Windows Wintun Layer 3 TUN mode (Throne engine parity)",
-    "Direct in-memory packet pipeline with mixed stack (Windows kernel TCP stack + native socket binding)",
-    "Eliminated tun2socks process and intermediate loopback SOCKS5 translation hops completely",
-    "Instant 600–750+ Mbps gigabit line-rate throughput on Windows",
+    "Fixed Sing-box v1.14.0 modern DNS server format (type: udp/local) & TUN address array",
+    "Added hijack-dns route rule action for kernel packet DNS capture",
+    "Native Windows Wintun Layer 3 TUN mode active with mixed stack (Windows TCP stack parity with Throne)",
+    "Direct line-rate gigabit throughput up to 600–750+ Mbps on Windows",
     "Preserved frictionless zero-root high-speed system proxy on macOS"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.0/ZeroTrace_1.3.0_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.1/ZeroTrace_1.3.1_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.0/ZeroTrace_1.3.0_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.1/ZeroTrace_1.3.1_aarch64.dmg"
   }
 }
