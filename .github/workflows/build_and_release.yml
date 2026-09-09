@@ -58,7 +58,7 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Download Windows Core Binaries (Wintun, Xray, and Tun2socks)
+      - name: Download Windows Core Binaries (Wintun, Xray, and Sing-box)
         shell: bash
         run: |
           mkdir -p src-tauri/binaries
@@ -74,11 +74,12 @@ jobs:
           unzip -q -o xray.zip xray.exe -d src-tauri/binaries/
           rm -f xray.zip
 
-          # 3. Fetch Tun2socks Windows 64-bit Core for Native Wintun TUN
-          curl -L -o tun2socks.zip https://github.com/xjasonlyu/tun2socks/releases/download/v2.5.2/tun2socks-windows-amd64.zip
-          unzip -q -o tun2socks.zip tun2socks-windows-amd64.exe -d .
-          mv tun2socks-windows-amd64.exe src-tauri/binaries/tun2socks.exe
-          rm -f tun2socks.zip
+          # 3. Fetch Sing-box Windows 64-bit Core for Gigabit Line-Rate Wintun TUN
+          curl -L -o sing-box.zip https://github.com/SagerNet/sing-box/releases/download/v1.14.0/sing-box-1.14.0-windows-amd64.zip
+          unzip -q -o sing-box.zip "sing-box-1.14.0-windows-amd64/sing-box.exe" "sing-box-1.14.0-windows-amd64/libcronet.dll" -d .
+          mv sing-box-1.14.0-windows-amd64/sing-box.exe src-tauri/binaries/sing-box.exe
+          mv sing-box-1.14.0-windows-amd64/libcronet.dll src-tauri/binaries/libcronet.dll
+          rm -rf sing-box-1.14.0-windows-amd64 sing-box.zip
 
       - name: Sync App Version from Tag
         shell: bash

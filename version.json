@@ -1,17 +1,18 @@
 {
-  "version": "1.2.3",
-  "versionCode": 16,
+  "version": "1.3.0",
+  "versionCode": 17,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Gigabit Line-Rate Optimization: 64MB TCP send/receive buffers enabled on tun2socks netstack",
-    "Active TCP window auto-tuning enabled (-tcp-auto-tuning) to match high-bandwidth delay products",
-    "Windows kernel subinterface MTU 9000 applied to Wintun adapter for full jumbo frame throughput",
-    "Xray-core policy upgraded to bufferSize: -1 for unlimited zero-copy connection streaming"
+    "Integrated Sing-box v1.14.0 Core for native Windows Wintun Layer 3 TUN mode (Throne engine parity)",
+    "Direct in-memory packet pipeline with mixed stack (Windows kernel TCP stack + native socket binding)",
+    "Eliminated tun2socks process and intermediate loopback SOCKS5 translation hops completely",
+    "Instant 600–750+ Mbps gigabit line-rate throughput on Windows",
+    "Preserved frictionless zero-root high-speed system proxy on macOS"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.3/ZeroTrace_1.2.3_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.0/ZeroTrace_1.3.0_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.3/ZeroTrace_1.2.3_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.0/ZeroTrace_1.3.0_aarch64.dmg"
   }
 }

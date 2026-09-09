@@ -90,16 +90,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
         state.lock().add_log("WARN", "ZeroTrace", &format!("Could not pre-resolve {} via local DNS; falling back to Xray engine resolver", config.server));
     }
 
-    // 1. Generate runtime Xray config JSON
-    let xray_json = XrayConfigGenerator::generate_runtime_json(
-        &config,
-        &settings,
-        10808,
-        10809,
-        resolved_ip.as_deref(),
-    );
-
-    // 2. Start Xray-Core engine with real-time log streaming
+    #[cfg(windows)]
     {
         let state_clone = state.inner().clone();
         let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
@@ -107,7 +98,13 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
         });
 
         let mut ctx = state.lock();
-        if let Err(e) = ctx.xray_process.start(&xray_json, &app_dir, Some(log_cb)) {
+        if let Err(e) = ctx.tun_manager.start_tunnel(
+            &config,
+            &settings,
+            resolved_ip.as_deref(),
+            &app_dir,
+            Some(log_cb),
+        ) {
             ctx.vpn_state = VpnState {
                 status: "error".to_string(),
                 server_name: None,
@@ -115,26 +112,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
                 connected_at: None,
                 error_message: Some(e.clone()),
             };
-            ctx.add_log("ERROR", "Xray-Core", &format!("Failed to start engine: {}", e));
-            return Err(e);
-        }
-        ctx.add_log("INFO", "Xray-Core", "Xray runtime engine spawned on 127.0.0.1:10808 (SOCKS5)");
-    }
-
-    // 3. Establish Wintun virtual adapter & configure Windows IP routing table
-    {
-        let server_target = resolved_ip.as_deref().unwrap_or(&config.server);
-        let mut ctx = state.lock();
-        if let Err(e) = ctx.tun_manager.start_tunnel(server_target, config.port, &settings.primary_dns) {
-            ctx.xray_process.stop();
-            ctx.vpn_state = VpnState {
-                status: "error".to_string(),
-                server_name: None,
-                server_address: None,
-                connected_at: None,
-                error_message: Some(e.clone()),
-            };
-            ctx.add_log("ERROR", "TunManager", &format!("Failed to activate tunnel: {}", e));
+            ctx.add_log("ERROR", "SingBox-Core", &format!("Failed to activate tunnel: {}", e));
             return Err(e);
         }
 
@@ -146,10 +124,78 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
             connected_at: Some(now),
             error_message: None,
         };
-        ctx.add_log("INFO", "TunManager", "Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
+        ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
+        return Ok(true);
     }
 
-    Ok(true)
+    #[cfg(not(windows))]
+    {
+        // 1. Generate runtime Xray config JSON
+        let xray_json = XrayConfigGenerator::generate_runtime_json(
+            &config,
+            &settings,
+            10808,
+            10809,
+            resolved_ip.as_deref(),
+        );
+
+        // 2. Start Xray-Core engine with real-time log streaming
+        {
+            let state_clone = state.inner().clone();
+            let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
+                state_clone.lock().add_log(level, tag, msg);
+            });
+
+            let mut ctx = state.lock();
+            if let Err(e) = ctx.xray_process.start(&xray_json, &app_dir, Some(log_cb)) {
+                ctx.vpn_state = VpnState {
+                    status: "error".to_string(),
+                    server_name: None,
+                    server_address: None,
+                    connected_at: None,
+                    error_message: Some(e.clone()),
+                };
+                ctx.add_log("ERROR", "Xray-Core", &format!("Failed to start engine: {}", e));
+                return Err(e);
+            }
+            ctx.add_log("INFO", "Xray-Core", "Xray runtime engine spawned on 127.0.0.1:10808 (SOCKS5)");
+        }
+
+        // 3. Configure macOS system proxy
+        {
+            let mut ctx = state.lock();
+            if let Err(e) = ctx.tun_manager.start_tunnel(
+                &config,
+                &settings,
+                resolved_ip.as_deref(),
+                &app_dir,
+                None,
+            ) {
+                ctx.xray_process.stop();
+                ctx.vpn_state = VpnState {
+                    status: "error".to_string(),
+                    server_name: None,
+                    server_address: None,
+                    connected_at: None,
+                    error_message: Some(e.clone()),
+                };
+                ctx.add_log("ERROR", "TunManager", &format!("Failed to activate tunnel: {}", e));
+                return Err(e);
+            }
+
+            let now = chrono::Utc::now().timestamp_millis();
+            ctx.vpn_state = VpnState {
+                status: "connected".to_string(),
+                server_name: Some(config.name.clone()),
+                server_address: Some(format!("{}:{}", config.server, config.port)),
+                connected_at: Some(now),
+                error_message: None,
+            };
+            ctx.add_log("INFO", "TunManager", "macOS high-speed system proxy active. Traffic routed via Xray tunnel.");
+        }
+
+        Ok(true)
+    }
 }
 
 #[tauri::command]

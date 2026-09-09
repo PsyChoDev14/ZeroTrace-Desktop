@@ -2,6 +2,7 @@ pub mod commands;
 pub mod models;
 pub mod parser;
 pub mod ping;
+pub mod singbox;
 pub mod storage;
 pub mod tun;
 pub mod xray;

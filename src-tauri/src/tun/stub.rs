@@ -17,10 +17,13 @@ impl StubTunManager {
 
     pub fn start_tunnel(
         &mut self,
-        server_host: &str,
-        _server_port: u16,
-        _primary_dns: &str,
+        config: &crate::models::ProxyConfig,
+        _settings: &crate::models::AppSettings,
+        _resolved_ip: Option<&str>,
+        _app_dir: &std::path::Path,
+        _log_fn: Option<Arc<dyn Fn(&str, &str, &str) + Send + Sync + 'static>>,
     ) -> Result<(), String> {
+        let server_host = &config.server;
         let service = Self::get_active_mac_service().unwrap_or_else(|| "Wi-Fi".to_string());
         println!("[StubTunManager] Configuring macOS system proxy for '{}' (SOCKS5 10808, HTTP 10809)...", service);
 
