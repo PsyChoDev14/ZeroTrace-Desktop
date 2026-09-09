@@ -22,7 +22,7 @@ impl WindowsTunManager {
     pub fn start_tunnel(
         &mut self,
         server_host_or_ip: &str,
-        _server_port: u16,
+        server_port: u16,
         primary_dns: &str,
     ) -> Result<(), String> {
         self.stop_tunnel();
@@ -32,7 +32,22 @@ impl WindowsTunManager {
         // 1. Locate tun2socks.exe
         let tun2socks_bin = Self::find_tun2socks_binary();
         let default_gw = Self::get_default_gateway();
-        self.server_ip = Some(server_host_or_ip.to_string());
+
+        // Pre-resolve or parse server IP for bypass route
+        let direct_ip = if server_host_or_ip.split('.').count() == 4
+            && server_host_or_ip.split('.').all(|p| p.parse::<u8>().is_ok())
+        {
+            Some(server_host_or_ip.to_string())
+        } else {
+            use std::net::ToSocketAddrs;
+            format!("{}:{}", server_host_or_ip, server_port)
+                .to_socket_addrs()
+                .ok()
+                .and_then(|mut iter| iter.find(|a| a.is_ipv4()))
+                .map(|a| a.ip().to_string())
+        };
+
+        self.server_ip = direct_ip.clone();
 
         if let Some(bin_path) = tun2socks_bin {
             println!("[WindowsTunManager] Spawning tun2socks from {:?}", bin_path);
@@ -51,9 +66,10 @@ impl WindowsTunManager {
             cmd.args(&[
                 "-device", "wintun",
                 "-proxy", "socks5://127.0.0.1:10808",
-                "-interface", "ZeroTrace TUN",
                 "-loglevel", "warning",
             ]);
+            cmd.stdout(std::process::Stdio::null());
+            cmd.stderr(std::process::Stdio::null());
 
             #[cfg(windows)]
             {
@@ -67,26 +83,60 @@ impl WindowsTunManager {
                     self.tun2socks_child = Some(child);
                     println!("[WindowsTunManager] tun2socks kernel forwarder spawned. Configuring IP routing...");
 
-                    // Allow Wintun adapter 600ms to register with Windows NDIS kernel
-                    std::thread::sleep(Duration::from_millis(600));
-
-                    // Configure Wintun IP address & DNS
-                    let dns = if !primary_dns.is_empty() { primary_dns } else { "94.140.14.14" };
-                    let _ = Command::new("netsh")
-                        .args(&["interface", "ipv4", "set", "address", "name=ZeroTrace TUN", "source=static", "addr=198.18.0.1", "mask=255.255.0.0"])
-                        .output();
-                    let _ = Command::new("netsh")
-                        .args(&["interface", "ipv4", "set", "dnsservers", "name=ZeroTrace TUN", "static", &format!("address={}", dns), "register=none", "validate=no"])
-                        .output();
-
-                    // If physical gateway and server IP are known, route server IP direct so Xray doesn't loop
-                    if let (Some(ref gw), false) = (&default_gw, server_host_or_ip.is_empty()) {
-                        let _ = Command::new("route")
-                            .args(&["add", server_host_or_ip, "mask", "255.255.255.255", gw, "metric", "1"])
+                    // Wait for Wintun adapter to appear in Windows NDIS network stack
+                    let mut adapter_ready = false;
+                    for attempt in 1..=15 {
+                        let check = Command::new("netsh")
+                            .args(&["interface", "show", "interface", "name=wintun"])
                             .output();
+                        if let Ok(c) = check {
+                            if c.status.success() {
+                                println!("[WindowsTunManager] Wintun interface detected on attempt {}", attempt);
+                                adapter_ready = true;
+                                break;
+                            }
+                        }
+                        std::thread::sleep(Duration::from_millis(200));
                     }
 
-                    // Route all PC internet traffic to Wintun using standard /1 subnets (WireGuard/OpenVPN route trick)
+                    if !adapter_ready {
+                        println!("[WindowsTunManager] Wintun interface check timeout, continuing with configuration...");
+                        std::thread::sleep(Duration::from_millis(400));
+                    }
+
+                    let dns = if !primary_dns.is_empty() { primary_dns } else { "94.140.14.14" };
+
+                    // Configure Wintun IP address & DNS servers
+                    let _ = Command::new("netsh")
+                        .args(&[
+                            "interface", "ipv4", "set", "address",
+                            "name=wintun",
+                            "source=static",
+                            "addr=198.18.0.1",
+                            "mask=255.255.0.0",
+                            "gateway=none"
+                        ])
+                        .output();
+                    let _ = Command::new("netsh")
+                        .args(&[
+                            "interface", "ipv4", "set", "dnsservers",
+                            "name=wintun",
+                            "static",
+                            &format!("address={}", dns),
+                            "register=none",
+                            "validate=no"
+                        ])
+                        .output();
+
+                    // If physical gateway and server IP are known, route server IP direct to gateway so Xray traffic doesn't loop
+                    if let (Some(ref gw), Some(ref s_ip)) = (&default_gw, &direct_ip) {
+                        let _ = Command::new("route")
+                            .args(&["add", s_ip, "mask", "255.255.255.255", gw, "metric", "1"])
+                            .output();
+                        println!("[WindowsTunManager] Direct bypass route established: {} -> physical gw {}", s_ip, gw);
+                    }
+
+                    // Route all PC internet traffic to Wintun using /1 subnets (longest-prefix match beats 0.0.0.0/0)
                     let _ = Command::new("route")
                         .args(&["add", "0.0.0.0", "mask", "128.0.0.0", "198.18.0.1", "metric", "1"])
                         .output();
@@ -94,11 +144,16 @@ impl WindowsTunManager {
                         .args(&["add", "128.0.0.0", "mask", "128.0.0.0", "198.18.0.1", "metric", "1"])
                         .output();
 
-                    // Clean any stale system proxy
-                    let _ = Self::set_windows_proxy(false);
+                    // Also configure default route via netsh on wintun interface with metric 1
+                    let _ = Command::new("netsh")
+                        .args(&["interface", "ipv4", "add", "route", "0.0.0.0/0", "wintun", "198.18.0.1", "metric=1"])
+                        .output();
+
+                    // Dual-Protection: also activate Windows System Proxy for 100% leak-proof browser traffic
+                    let _ = Self::set_windows_proxy(true);
 
                     self.is_active.store(true, Ordering::SeqCst);
-                    println!("[WindowsTunManager] Wintun Layer 3 TUN mode active. Whole-device gigabit throughput enabled.");
+                    println!("[WindowsTunManager] Wintun Layer 3 TUN mode active with dual-protection routing enabled.");
                     return Ok(());
                 }
                 Err(e) => {
@@ -121,6 +176,7 @@ impl WindowsTunManager {
             // 1. Delete Wintun routes
             let _ = Command::new("route").args(&["delete", "0.0.0.0", "mask", "128.0.0.0"]).output();
             let _ = Command::new("route").args(&["delete", "128.0.0.0", "mask", "128.0.0.0"]).output();
+            let _ = Command::new("netsh").args(&["interface", "ipv4", "delete", "route", "0.0.0.0/0", "wintun"]).output();
             if let Some(ref s_ip) = self.server_ip.take() {
                 let _ = Command::new("route").args(&["delete", s_ip, "mask", "255.255.255.255"]).output();
             }
@@ -145,6 +201,8 @@ impl WindowsTunManager {
         println!("[WindowsTunManager] Checking and cleaning stale Wintun routes and proxy on startup...");
         let _ = Command::new("route").args(&["delete", "0.0.0.0", "mask", "128.0.0.0"]).output();
         let _ = Command::new("route").args(&["delete", "128.0.0.0", "mask", "128.0.0.0"]).output();
+        let _ = Command::new("netsh").args(&["interface", "ipv4", "delete", "route", "0.0.0.0/0", "wintun"]).output();
+        let _ = Command::new("taskkill").args(&["/F", "/IM", "tun2socks.exe"]).output();
         let _ = Self::set_windows_proxy(false);
     }
 
@@ -202,6 +260,25 @@ impl WindowsTunManager {
     }
 
     fn get_default_gateway() -> Option<String> {
+        // Fast path: parse `route print 0.0.0.0` (takes ~5ms)
+        if let Ok(out) = Command::new("cmd").args(&["/c", "route", "print", "0.0.0.0"]).output() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            for line in stdout.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 4 && parts[0] == "0.0.0.0" && parts[1] == "0.0.0.0" {
+                    let gw = parts[2].trim();
+                    if gw != "0.0.0.0"
+                        && gw.split('.').count() == 4
+                        && gw.split('.').all(|p| p.parse::<u8>().is_ok())
+                    {
+                        println!("[WindowsTunManager] Discovered physical gateway via route print: {}", gw);
+                        return Some(gw.to_string());
+                    }
+                }
+            }
+        }
+
+        // Fallback: PowerShell Get-NetRoute
         let out = Command::new("powershell")
             .args(&[
                 "-NoProfile",
@@ -212,6 +289,7 @@ impl WindowsTunManager {
             .ok()?;
         let gw = String::from_utf8_lossy(&out.stdout).trim().to_string();
         if !gw.is_empty() && gw.split('.').count() == 4 && gw != "0.0.0.0" {
+            println!("[WindowsTunManager] Discovered physical gateway via PowerShell: {}", gw);
             Some(gw)
         } else {
             None

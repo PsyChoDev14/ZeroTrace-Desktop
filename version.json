@@ -1,18 +1,17 @@
 {
-  "version": "1.2.0",
-  "versionCode": 13,
+  "version": "1.2.1",
+  "versionCode": 14,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Native Kernel Wintun Layer 3 TUN Engine: 800+ Mbps gigabit line-rate throughput",
-    "Whole-device VPN tunneling: 100% of PC traffic (games, UDP, Discord, and browsers) routed through tunnel",
-    "Multi-threaded Google gVisor tun2socks kernel forwarder integration with wintun.sys",
-    "Automated routing table configuration with clean shutdown and route recovery",
-    "Graceful fallback protection to ensure seamless connectivity"
+    "Fixed Wintun virtual adapter naming and IP configuration binding",
+    "Dual-protection routing: 100% leak-proof browser browsing and whole-device Layer 3 TUN",
+    "Sub-millisecond route print physical gateway discovery with PowerShell fallback",
+    "Clean route cleanup and stale process termination on shutdown and startup"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.0/ZeroTrace_1.2.0_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.1/ZeroTrace_1.2.1_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.0/ZeroTrace_1.2.0_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.1/ZeroTrace_1.2.1_aarch64.dmg"
   }
 }
