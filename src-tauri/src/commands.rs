@@ -17,6 +17,7 @@ pub struct AppContext {
     pub settings: AppSettings,
     pub traffic_stats: TrafficStats,
     pub last_stats_poll: Option<i64>,
+    pub last_octets: Option<(u64, u64)>,
     pub logs: Vec<DiagnosticLog>,
     pub tun_manager: TunManager,
     pub xray_process: XrayProcess,
@@ -45,8 +46,7 @@ pub fn get_state(state: State<SharedState>) -> VpnState {
     state.lock().vpn_state.clone()
 }
 
-#[tauri::command]
-pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -> Result<bool, String> {
+pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result<bool, String> {
     let (config, settings, app_dir) = {
         let mut ctx = state.lock();
         let target_id = config_id.or_else(|| ctx.selected_id.clone());
@@ -93,7 +93,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
 
     #[cfg(windows)]
     {
-        let state_clone = state.inner().clone();
+        let state_clone = state.clone();
         let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
             state_clone.lock().add_log(level, tag, msg);
         });
@@ -142,7 +142,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
 
         // 2. Start Xray-Core engine with real-time log streaming
         {
-            let state_clone = state.inner().clone();
+            let state_clone = state.clone();
             let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
                 state_clone.lock().add_log(level, tag, msg);
             });
@@ -200,7 +200,11 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
 }
 
 #[tauri::command]
-pub fn disconnect(state: State<SharedState>) -> bool {
+pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -> Result<bool, String> {
+    do_connect(config_id, state.inner().clone()).await
+}
+
+pub fn do_disconnect(state: SharedState) -> bool {
     let mut ctx = state.lock();
     ctx.add_log("INFO", "ZeroTrace", "Disconnecting tunnel and restoring network routes...");
     ctx.tun_manager.stop_tunnel();
@@ -215,8 +219,14 @@ pub fn disconnect(state: State<SharedState>) -> bool {
     ctx.traffic_stats.download_speed = 0;
     ctx.traffic_stats.upload_speed = 0;
     ctx.last_stats_poll = None;
+    ctx.last_octets = None;
     ctx.add_log("INFO", "ZeroTrace", "Network routes restored. Shield offline.");
     true
+}
+
+#[tauri::command]
+pub fn disconnect(state: State<SharedState>) -> bool {
+    do_disconnect(state.inner().clone())
 }
 
 #[tauri::command]
@@ -347,6 +357,80 @@ pub fn clear_logs(state: State<SharedState>) -> bool {
     true
 }
 
+#[cfg(target_os = "windows")]
+fn get_live_interface_octets() -> Option<(u64, u64)> {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{GetIfTable2, FreeMibTable, MIB_IF_TABLE2};
+    unsafe {
+        let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
+        if GetIfTable2(&mut table) == 0 && !table.is_null() {
+            let num_entries = (*table).NumEntries as usize;
+            let rows_ptr = (*table).Table.as_ptr();
+
+            for i in 0..num_entries {
+                let row = *rows_ptr.add(i);
+                let alias_len = row.Alias.iter().position(|&c| c == 0).unwrap_or(row.Alias.len());
+                let alias = String::from_utf16_lossy(&row.Alias[..alias_len]);
+
+                if alias.eq_ignore_ascii_case("ZeroTrace") {
+                    let res = (row.InOctets, row.OutOctets);
+                    FreeMibTable(table as *const _);
+                    return Some(res);
+                }
+
+                let desc_len = row.Description.iter().position(|&c| c == 0).unwrap_or(row.Description.len());
+                let desc = String::from_utf16_lossy(&row.Description[..desc_len]);
+                if desc.to_lowercase().contains("wintun") || desc.to_lowercase().contains("zerotrace") {
+                    let res = (row.InOctets, row.OutOctets);
+                    FreeMibTable(table as *const _);
+                    return Some(res);
+                }
+            }
+
+            FreeMibTable(table as *const _);
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn get_live_interface_octets() -> Option<(u64, u64)> {
+    let mut ifaddrs: *mut libc::ifaddrs = std::ptr::null_mut();
+    unsafe {
+        if libc::getifaddrs(&mut ifaddrs) == 0 && !ifaddrs.is_null() {
+            let mut curr = ifaddrs;
+            let mut in_bytes = 0u64;
+            let mut out_bytes = 0u64;
+            let mut found = false;
+
+            while !curr.is_null() {
+                let ifa = *curr;
+                if !ifa.ifa_addr.is_null() && (*ifa.ifa_addr).sa_family as i32 == libc::AF_LINK {
+                    let name = std::ffi::CStr::from_ptr(ifa.ifa_name).to_string_lossy();
+                    if name.starts_with("en") || name.starts_with("utun") {
+                        if !ifa.ifa_data.is_null() {
+                            let data = *(ifa.ifa_data as *const libc::if_data);
+                            in_bytes += data.ifi_ibytes as u64;
+                            out_bytes += data.ifi_obytes as u64;
+                            found = true;
+                        }
+                    }
+                }
+                curr = ifa.ifa_next;
+            }
+            libc::freeifaddrs(ifaddrs);
+            if found {
+                return Some((in_bytes, out_bytes));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn get_live_interface_octets() -> Option<(u64, u64)> {
+    None
+}
+
 #[tauri::command]
 pub fn get_traffic_stats(state: State<SharedState>) -> TrafficStats {
     let mut ctx = state.lock();
@@ -359,35 +443,40 @@ pub fn get_traffic_stats(state: State<SharedState>) -> TrafficStats {
             0
         };
 
-        // Realistic live throughput variations
-        let down_speed = 1_500_000 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 800_000);
-        let up_speed = 250_000 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 150_000);
+        if let Some((curr_in, curr_out)) = get_live_interface_octets() {
+            if let (Some(last_poll), Some((last_in, last_out))) = (ctx.last_stats_poll, ctx.last_octets) {
+                let delta_ms = (now - last_poll).max(1);
+                let delta_in = curr_in.saturating_sub(last_in);
+                let delta_out = curr_out.saturating_sub(last_out);
 
-        // Calculate accurate byte delta based on elapsed milliseconds between polls
-        let delta_ms = if let Some(last) = ctx.last_stats_poll {
-            (now - last).max(0).min(5000)
+                let down_speed = (delta_in * 1000) / (delta_ms as u64);
+                let up_speed = (delta_out * 1000) / (delta_ms as u64);
+
+                ctx.traffic_stats.download_speed = down_speed;
+                ctx.traffic_stats.upload_speed = up_speed;
+                ctx.traffic_stats.total_downloaded += delta_in;
+                ctx.traffic_stats.total_uploaded += delta_out;
+            }
+            ctx.last_octets = Some((curr_in, curr_out));
         } else {
-            1000
-        };
+            ctx.traffic_stats.download_speed = 0;
+            ctx.traffic_stats.upload_speed = 0;
+        }
+
         ctx.last_stats_poll = Some(now);
-
-        let delta_down = (down_speed * delta_ms as u64) / 1000;
-        let delta_up = (up_speed * delta_ms as u64) / 1000;
-
-        ctx.traffic_stats.download_speed = down_speed;
-        ctx.traffic_stats.upload_speed = up_speed;
-        ctx.traffic_stats.total_downloaded += delta_down;
-        ctx.traffic_stats.total_uploaded += delta_up;
         ctx.traffic_stats.uptime_seconds = uptime;
     } else {
         ctx.last_stats_poll = None;
+        ctx.last_octets = None;
+        ctx.traffic_stats.download_speed = 0;
+        ctx.traffic_stats.upload_speed = 0;
     }
     ctx.traffic_stats.clone()
 }
 
 #[tauri::command]
 pub fn window_minimize(window: tauri::WebviewWindow) {
-    let _ = window.minimize();
+    let _ = window.hide();
 }
 
 #[tauri::command]

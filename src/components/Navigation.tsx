@@ -36,16 +36,7 @@ const NavigationComponent: React.FC<NavigationProps> = ({
   return (
     <div className="w-full px-4 pb-3 pt-1 pointer-events-none z-40 select-none shrink-0">
       {/* Floating Island */}
-      <nav
-        className="pointer-events-auto w-full max-w-[344px] mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full relative"
-        style={{
-          background: 'linear-gradient(180deg, rgba(22, 25, 37, 0.82) 0%, rgba(12, 14, 22, 0.94) 100%)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 16px 36px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
-        }}
-      >
+      <nav className="nav-glass pointer-events-auto w-full max-w-[344px] mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full relative">
         {/* Left Tabs */}
         <div className="flex items-center gap-1.5 flex-1 justify-around">
           {leftTabs.map(tab => {
@@ -57,7 +48,7 @@ const NavigationComponent: React.FC<NavigationProps> = ({
                 className={`w-11 h-11 rounded-2xl border flex items-center justify-center relative cursor-pointer outline-none focus:outline-none focus:ring-0 select-none transition-[background-color,border-color,color,transform,box-shadow] duration-200 ease-out ${
                   isActive
                     ? 'bg-blue-500/20 border-blue-400/40 text-blue-400 shadow-[0_0_14px_rgba(59,130,246,0.3)] scale-105'
-                    : 'bg-transparent border-transparent text-white/45 hover:text-white hover:bg-white/8 active:scale-95'
+                    : 'bg-transparent border-transparent text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 active:scale-95'
                 }`}
                 title={tab.label}
                 aria-label={tab.label}
@@ -100,7 +91,7 @@ const NavigationComponent: React.FC<NavigationProps> = ({
                 className={`w-11 h-11 rounded-2xl border flex items-center justify-center relative cursor-pointer outline-none focus:outline-none focus:ring-0 select-none transition-[background-color,border-color,color,transform,box-shadow] duration-200 ease-out ${
                   isActive
                     ? 'bg-blue-500/20 border-blue-400/40 text-blue-400 shadow-[0_0_14px_rgba(59,130,246,0.3)] scale-105'
-                    : 'bg-transparent border-transparent text-white/45 hover:text-white hover:bg-white/8 active:scale-95'
+                    : 'bg-transparent border-transparent text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 active:scale-95'
                 }`}
                 title={tab.label}
                 aria-label={tab.label}

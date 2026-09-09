@@ -40,6 +40,7 @@ export function App() {
     killSwitch: true,
     autoConnect: false,
     minimizeToTray: true,
+    theme: 'dark',
   });
   const [logs, setLogs] = useState<DiagnosticLog[]>([]);
 
@@ -61,6 +62,24 @@ export function App() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  // System appearance listener for automatic dark/light mode switching
+  const [systemDark, setSystemDark] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const isLightMode = settings.theme === 'light' || (settings.theme === 'system' && !systemDark);
 
   // Initial load
   useEffect(() => {
@@ -166,11 +185,36 @@ export function App() {
   const selectedConfig = configs.find(c => c.id === selectedId) || null;
 
   const handleToggleConnect = useCallback(async () => {
-    if (vpnState.status === 'connected') {
-      await api.disconnect();
+    if (vpnState.status === 'connected' || vpnState.status === 'connecting') {
+      // Optimistic instant response: immediate stopping state & reset throughput
       setVpnState({ status: 'stopping' });
+      setTrafficStats(prev => ({
+        ...prev,
+        downloadSpeed: 0,
+        uploadSpeed: 0,
+      }));
+      try {
+        await api.disconnect();
+      } catch (e) {
+        console.error('Failed to disconnect cleanly:', e);
+      }
+      setVpnState({
+        status: 'disconnected',
+        serverName: undefined,
+        serverAddress: undefined,
+        connectedAt: undefined,
+        errorMessage: undefined,
+      });
+      setTrafficStats({
+        downloadSpeed: 0,
+        uploadSpeed: 0,
+        totalDownloaded: 0,
+        totalUploaded: 0,
+        uptimeSeconds: 0,
+      });
       api.getLogs().then(l => l && setLogs(l));
     } else {
+      setVpnState({ status: 'connecting' });
       if (!selectedId && configs.length > 0) {
         await api.connect(configs[0].id);
         api.getLogs().then(l => l && setLogs(l));
@@ -178,6 +222,7 @@ export function App() {
         await api.connect(selectedId);
         api.getLogs().then(l => l && setLogs(l));
       } else {
+        setVpnState({ status: 'disconnected' });
         setIsAddOpen(true);
       }
     }
@@ -236,7 +281,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans">
+    <div className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans ${isLightMode ? 'theme-light' : ''}`}>
       {/* 1. Frameless Window Titlebar */}
       <TitleBar
         isConnected={vpnState.status === 'connected'}

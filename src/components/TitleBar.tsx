@@ -1,5 +1,5 @@
 import React from 'react';
-import { Minus, Square, X, Terminal, Plus } from 'lucide-react';
+import { Minus, X, Terminal } from 'lucide-react';
 import { ZeroTraceWordmark } from './Icons';
 import { isTauri } from '../utils/tauriBridge';
 
@@ -23,19 +23,6 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
         console.warn('Failed to minimize via command, falling back to window API', e);
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().minimize();
-      }
-    }
-  };
-
-  const handleMaximize = async () => {
-    if (isTauri()) {
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('window_maximize');
-      } catch (e) {
-        console.warn('Failed to maximize via command, falling back to window API', e);
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().toggleMaximize();
       }
     }
   };
@@ -88,18 +75,11 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
           >
             <Minus size={7} strokeWidth={3} className="text-[#4A3200] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           </button>
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              handleMaximize();
-            }}
-            onMouseDown={e => e.stopPropagation()}
-            className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29] flex items-center justify-center cursor-pointer active:brightness-75 transition-all shadow-sm outline-none focus:outline-none"
-            title="Zoom"
-            aria-label="Zoom"
-          >
-            <Plus size={7} strokeWidth={3} className="text-[#003B00] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-          </button>
+          <div
+            className="w-3 h-3 rounded-full bg-[#27C93F]/40 border border-[#1AAB29]/40 flex items-center justify-center cursor-default opacity-50"
+            title="Zoom Disabled (Fixed Geometry)"
+            aria-label="Zoom Disabled"
+          />
         </div>
 
         {/* Centered App Brand & Status Dot */}
@@ -192,17 +172,6 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
           title="Minimize"
         >
           <Minus size={12} />
-        </button>
-        <button
-          onClick={e => {
-            e.stopPropagation();
-            handleMaximize();
-          }}
-          onMouseDown={e => e.stopPropagation()}
-          className="w-6 h-6 flex items-center justify-center rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors cursor-pointer outline-none focus:outline-none"
-          title="Maximize"
-        >
-          <Square size={10} />
         </button>
         <button
           onClick={e => {

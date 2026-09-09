@@ -59,6 +59,7 @@ export interface AppSettings {
   killSwitch: boolean;
   autoConnect: boolean;
   minimizeToTray: boolean;
+  theme?: 'dark' | 'light' | 'system';
 }
 
 export interface TrafficStats {

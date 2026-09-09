@@ -4,22 +4,55 @@
 
 @layer base {
   :root {
-    --zt-bg: #08080A;
-    --zt-bg-elevated: #0E0E11;
-    --zt-surface: #141417;
-    --zt-surface-2: #1B1B20;
-    --zt-border: #26262C;
-    --zt-border-strong: #33333B;
-    --zt-accent: #5468FF;
+    --zt-bg: 8 8 10;
+    --zt-bg-elevated: 14 14 17;
+    --zt-surface: 20 20 23;
+    --zt-surface-2: 27 27 32;
+    --zt-border: 38 38 44;
+    --zt-border-strong: 51 51 59;
+    --zt-track: rgba(255, 255, 255, 0.07);
+    --zt-text: 244 244 246;
+    --zt-text-muted: 140 140 151;
+    --zt-text-faint: 92 92 102;
+    --zt-accent: 84 104 255;
+    --zt-accent-hover: 106 123 255;
     --zt-accent-soft: rgba(84, 104, 255, 0.14);
-    --zt-success: #35C77B;
-    --zt-danger: #F0533D;
-    --zt-warn: #E5A33C;
+    --zt-accent-ring: rgba(84, 104, 255, 0.32);
+    --zt-success: 53 199 123;
+    --zt-success-soft: rgba(53, 199, 123, 0.14);
+    --zt-warn: 229 163 60;
+    --zt-warn-soft: rgba(229, 163, 60, 0.14);
+    --zt-danger: 240 83 61;
+    --zt-danger-soft: rgba(240, 83, 61, 0.14);
+  }
+
+  .theme-light {
+    color-scheme: light;
+    --zt-bg: 246 247 249;
+    --zt-bg-elevated: 255 255 255;
+    --zt-surface: 255 255 255;
+    --zt-surface-2: 238 241 246;
+    --zt-border: 226 230 238;
+    --zt-border-strong: 203 209 220;
+    --zt-track: rgba(0, 0, 0, 0.06);
+    --zt-text: 17 24 39;
+    --zt-text-muted: 100 116 139;
+    --zt-text-faint: 148 163 184;
+    --zt-accent: 79 70 229;
+    --zt-accent-hover: 67 56 202;
+    --zt-accent-soft: rgba(79, 70, 229, 0.10);
+    --zt-accent-ring: rgba(79, 70, 229, 0.25);
+    --zt-success: 16 185 129;
+    --zt-success-soft: rgba(16, 185, 129, 0.12);
+    --zt-warn: 217 119 6;
+    --zt-warn-soft: rgba(217, 119, 6, 0.12);
+    --zt-danger: 239 68 68;
+    --zt-danger-soft: rgba(239, 68, 68, 0.12);
   }
 
   body {
-    background-color: var(--zt-bg);
-    color: #F4F4F6;
+    background-color: rgb(var(--zt-bg));
+    color: rgb(var(--zt-text));
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
@@ -40,6 +73,13 @@
   background: #33333B;
 }
 
+.theme-light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
 .liquid-glass {
   background: linear-gradient(180deg, rgba(19, 21, 31, 0.88) 0%, rgba(11, 13, 19, 0.95) 100%);
   border: 1px solid transparent;
@@ -47,6 +87,12 @@
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+.theme-light .liquid-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.06);
 }
 
 .liquid-card {
@@ -58,6 +104,112 @@
 .liquid-card:hover {
   border-color: #33333B;
   background: #18181D;
+}
+
+.theme-light .liquid-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.theme-light .liquid-card:hover {
+  border-color: #CBD5E1;
+  background: #F8FAFC;
+}
+
+/* Floating Navigation Dock Glass */
+.nav-glass {
+  background: linear-gradient(180deg, rgba(22, 25, 37, 0.88) 0%, rgba(12, 14, 22, 0.96) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+.theme-light .nav-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 244, 246, 0.97) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.10), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Universal Light Theme Card / Surface / Text Adaptations */
+.theme-light .bg-white\/5 {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.theme-light .bg-white\/8,
+.theme-light .hover\:bg-white\/8:hover {
+  background-color: #F8FAFC !important;
+}
+.theme-light .bg-white\/10 {
+  background-color: #F1F5F9 !important;
+}
+.theme-light .hover\:bg-white\/5:hover {
+  background-color: #F1F5F9 !important;
+}
+.theme-light .hover\:bg-white\/10:hover {
+  background-color: #E2E8F0 !important;
+}
+
+.theme-light .border-white\/5,
+.theme-light .border-white\/10,
+.theme-light .border-white\/15,
+.theme-light .border-white\/20 {
+  border-color: #E2E8F0 !important;
+}
+
+.theme-light .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #F1F5F9 !important;
+}
+
+.theme-light h1.text-white,
+.theme-light h2.text-white,
+.theme-light h3.text-white,
+.theme-light span.text-white,
+.theme-light span.text-white\/95,
+.theme-light span.text-white\/90,
+.theme-light p.text-white,
+.theme-light label.text-white,
+.theme-light div.text-white {
+  color: #0F172A;
+}
+
+.theme-light span.text-white\/80,
+.theme-light span.text-white\/70,
+.theme-light div.text-white\/80,
+.theme-light div.text-white\/70 {
+  color: #334155;
+}
+
+.theme-light span.text-white\/60,
+.theme-light span.text-white\/50,
+.theme-light span.text-white\/45,
+.theme-light span.text-white\/40,
+.theme-light div.text-white\/40,
+.theme-light p.text-white\/40 {
+  color: #64748B;
+}
+
+.theme-light span.text-white\/30,
+.theme-light span.text-white\/20,
+.theme-light svg.text-white\/30,
+.theme-light svg.text-white\/40 {
+  color: #94A3B8;
+}
+
+.theme-light input.text-white,
+.theme-light select.text-white {
+  color: #0F172A !important;
+}
+
+.theme-light input::placeholder {
+  color: #94A3B8 !important;
+}
+
+.theme-light select option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
 }
 
 @keyframes laserSpin {

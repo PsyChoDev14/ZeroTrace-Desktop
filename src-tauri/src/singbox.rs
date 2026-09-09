@@ -348,6 +348,7 @@ mod tests {
             kill_switch: true,
             auto_connect: false,
             minimize_to_tray: true,
+            theme: "dark".to_string(),
         };
 
         let json_str = SingboxConfigGenerator::generate_runtime_json(
@@ -427,6 +428,7 @@ mod tests {
             kill_switch: true,
             auto_connect: false,
             minimize_to_tray: true,
+            theme: "dark".to_string(),
         };
 
         let json_str = SingboxConfigGenerator::generate_runtime_json(

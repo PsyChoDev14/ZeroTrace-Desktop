@@ -52,6 +52,7 @@ pub fn run() {
                 settings,
                 traffic_stats: TrafficStats::default(),
                 last_stats_poll: None,
+                last_octets: None,
                 logs: vec![
                     DiagnosticLog {
                         timestamp: chrono::Utc::now().to_rfc3339(),
@@ -67,6 +68,67 @@ pub fn run() {
 
             let shared_state: SharedState = Arc::new(Mutex::new(initial_context));
             app.manage(shared_state);
+
+            // Setup System Tray / Menu Bar Status Icon
+            use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent};
+            use tauri::menu::{Menu, MenuItem};
+
+            let show_i = MenuItem::with_id(app, "show", "Open ZeroTrace", true, None::<&str>)?;
+            let toggle_i = MenuItem::with_id(app, "toggle", "Connect / Disconnect", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "Quit ZeroTrace", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &toggle_i, &quit_i])?;
+
+            let mut tray_builder = TrayIconBuilder::new()
+                .menu(&menu)
+                .tooltip("ZeroTrace VPN")
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.unminimize();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "toggle" => {
+                            let state_arc = app.state::<SharedState>().inner().clone();
+                            let status = state_arc.lock().vpn_state.status.clone();
+                            if status == "connected" {
+                                do_disconnect(state_arc);
+                            } else {
+                                let first_id = state_arc.lock().selected_id.clone()
+                                    .or_else(|| state_arc.lock().configs.first().map(|c| c.id.clone()));
+                                tokio::spawn(async move {
+                                    let _ = do_connect(first_id, state_arc).await;
+                                });
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            if w.is_visible().unwrap_or(false) {
+                                let _ = w.hide();
+                            } else {
+                                let _ = w.show();
+                                let _ = w.unminimize();
+                                let _ = w.set_focus();
+                            }
+                        }
+                    }
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+
+            let _ = tray_builder.build(app)?;
 
             Ok(())
         })

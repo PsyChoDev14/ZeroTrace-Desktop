@@ -1,17 +1,18 @@
 {
-  "version": "1.3.3",
-  "versionCode": 20,
+  "version": "1.3.4",
+  "versionCode": 21,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Suppressed all console/PowerShell window flickering during connect, disconnect, and updates",
-    "Enabled CREATE_NO_WINDOW on Windows process executions (reg, taskkill, curl, powershell, cmd)",
-    "Clean, seamless background execution with 0ms visual popups",
-    "Direct line-rate gigabit throughput up to 600–750+ Mbps on Windows Wintun"
+    "Real-time live throughput engine on Windows (Wintun GetIfTable2) & macOS (AF_LINK getifaddrs)",
+    "Fixed utility window geometry (380x660) with maximize button removed",
+    "System Tray / Menu Bar integration: minimizing hides to notification tray area",
+    "Light Mode & System Theme support with Apple Human Interface Guidelines palette",
+    "Instant, optimistic VPN disconnect with 0ms transition delay"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.3/ZeroTrace_1.3.3_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.4/ZeroTrace_1.3.4_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.3/ZeroTrace_1.3.3_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.4/ZeroTrace_1.3.4_aarch64.dmg"
   }
 }

@@ -21,6 +21,7 @@ let mockSettings: AppSettings = {
   killSwitch: true,
   autoConnect: false,
   minimizeToTray: true,
+  theme: 'dark',
 };
 
 let mockLogs: DiagnosticLog[] = [

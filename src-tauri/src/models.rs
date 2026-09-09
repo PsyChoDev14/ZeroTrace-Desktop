@@ -116,7 +116,11 @@ pub struct AppSettings {
     pub kill_switch: bool,
     pub auto_connect: bool,
     pub minimize_to_tray: bool,
+    #[serde(default = "default_theme")]
+    pub theme: String,
 }
+
+fn default_theme() -> String { "dark".to_string() }
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -133,6 +137,7 @@ impl Default for AppSettings {
             kill_switch: true,
             auto_connect: false,
             minimize_to_tray: true,
+            theme: "dark".to_string(),
         }
     }
 }

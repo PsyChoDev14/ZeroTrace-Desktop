@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Shield, Globe, Terminal, ChevronRight, Check, RefreshCw, ExternalLink } from 'lucide-react';
+import { Settings, Shield, Globe, Terminal, ChevronRight, Check, RefreshCw, ExternalLink, Sun } from 'lucide-react';
 import { AppSettings, DpiBypassMode } from '../types';
 import { checkForAppUpdate, AppUpdateInfo, CURRENT_APP_VERSION } from '../utils/updater';
 import { openExternalUrl } from '../utils/tauriBridge';
@@ -95,6 +95,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <Check size={13} /> Saved
           </span>
         )}
+      </div>
+
+      {/* Group 0: Appearance */}
+      <div>
+        <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5 block">
+          Appearance
+        </span>
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-3 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Sun size={15} className="text-amber-400 shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-medium text-white/90">Visual Theme</span>
+              <span className="text-[11px] text-white/40">Dark, Light or System match</span>
+            </div>
+          </div>
+          <div className="flex items-center p-1 rounded-xl bg-white/10 border border-white/10 gap-0.5">
+            {(['dark', 'light', 'system'] as const).map(mode => {
+              const selected = (current.theme || 'dark') === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => updateSetting('theme', mode)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
+                    selected
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {mode === 'system' ? 'Auto' : mode}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Group 1: DNS & Anti-Censorship */}
