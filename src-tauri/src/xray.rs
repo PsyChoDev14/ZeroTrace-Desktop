@@ -31,34 +31,30 @@ impl XrayConfigGenerator {
             DpiBypassMode::Off => "",
         };
         let effective_length = match settings.dpi_bypass_mode {
-            DpiBypassMode::SmartFragment => "10-30",
-            DpiBypassMode::DeepStealth => "5-15",
+            DpiBypassMode::SmartFragment => "100-200",
+            DpiBypassMode::DeepStealth => "10-30",
             DpiBypassMode::Custom => &settings.fragment_length,
             DpiBypassMode::Off => "",
         };
         let effective_interval = match settings.dpi_bypass_mode {
-            DpiBypassMode::SmartFragment => "2-8",
+            DpiBypassMode::SmartFragment => "10-20",
             DpiBypassMode::DeepStealth => "5-10",
             DpiBypassMode::Custom => &settings.fragment_interval,
             DpiBypassMode::Off => "",
         };
 
-        // 1. Log (stream both access and error events to stdout/stderr for real-time diagnostics)
+        // 1. Log configuration (warning level preserves maximum gigabit line speed without stdout pipe blocking)
         let log = json!({
-            "access": "",
             "error": "",
-            "loglevel": "debug"
+            "loglevel": "warning"
         });
 
-        // 2. High-Performance Policy (4MB buffer, fast zombie socket reclamation)
+        // 2. High-Performance Core Policy (zero-copy native buffer pool, 300s idle timeout)
         let policy = json!({
             "levels": {
                 "0": {
                     "handshake": 4,
-                    "connIdle": 120,
-                    "uplinkOnly": 2,
-                    "downlinkOnly": 4,
-                    "bufferSize": 4096
+                    "connIdle": 300
                 }
             },
             "system": {
@@ -67,7 +63,7 @@ impl XrayConfigGenerator {
             }
         });
 
-        // 3. Inbounds (Local SOCKS5 on 10808 and Local HTTP on 10809 with TLS/HTTP sniffing)
+        // 3. Inbounds (Local SOCKS5 on 10808 and Local HTTP on 10809)
         #[allow(unused_mut)]
         let mut inbounds = vec![
             json!({
@@ -89,12 +85,7 @@ impl XrayConfigGenerator {
                 "tag": "http-in",
                 "port": http_port,
                 "listen": "127.0.0.1",
-                "protocol": "http",
-                "sniffing": {
-                    "enabled": true,
-                    "routeOnly": true,
-                    "destOverride": ["http", "tls"]
-                }
+                "protocol": "http"
             })
         ];
 
@@ -127,10 +118,7 @@ impl XrayConfigGenerator {
                 "streamSettings": {
                     "sockopt": {
                         "tcpNoDelay": true,
-                        "tcpFastOpen": true,
-                        "tcpKeepAlivePeriod": 15,
-                        "tcpKeepAliveInterval": 15,
-                        "tcpCongestion": "bbr"
+                        "tcpKeepAlivePeriod": 15
                     }
                 }
             }));
@@ -146,9 +134,7 @@ impl XrayConfigGenerator {
             "streamSettings": {
                 "sockopt": {
                     "tcpNoDelay": true,
-                    "tcpFastOpen": true,
-                    "tcpKeepAlivePeriod": 15,
-                    "tcpKeepAliveInterval": 15
+                    "tcpKeepAlivePeriod": 15
                 }
             }
         }));
@@ -269,7 +255,7 @@ impl XrayConfigGenerator {
         }));
 
         let routing = json!({
-            "domainStrategy": "IPIfNonMatch",
+            "domainStrategy": "AsIs",
             "rules": rules
         });
 
@@ -484,9 +470,7 @@ impl XrayConfigGenerator {
         // Socket options
         let mut sockopt = json!({
             "tcpNoDelay": true,
-            "tcpFastOpen": true,
-            "tcpKeepAlivePeriod": 15,
-            "tcpKeepAliveInterval": 15
+            "tcpKeepAlivePeriod": 15
         });
         if is_dpi_fragment_active {
             sockopt["dialerProxy"] = json!("fragment");
@@ -704,16 +688,15 @@ mod tests {
         assert_eq!(inbounds[0]["port"], 10808);
         assert_eq!(inbounds[1]["tag"], "http-in");
         assert_eq!(inbounds[1]["port"], 10809);
-        assert_eq!(inbounds[1]["sniffing"]["enabled"], true);
 
-        // Verify Policy Buffer Size
-        assert_eq!(root["policy"]["levels"]["0"]["bufferSize"], 4096);
+        // Verify Core Policy
+        assert_eq!(root["policy"]["levels"]["0"]["connIdle"], 300);
 
         // Verify Outbounds
         let outbounds = root["outbounds"].as_array().expect("outbounds array");
         assert_eq!(outbounds[0]["tag"], "proxy");
         assert_eq!(outbounds[0]["protocol"], "vless");
-        assert_eq!(outbounds[0]["streamSettings"]["sockopt"]["tcpFastOpen"], true);
+        assert_eq!(outbounds[0]["streamSettings"]["sockopt"]["tcpNoDelay"], true);
 
         // Verify Reality settings
         let reality = &outbounds[0]["streamSettings"]["realitySettings"];
@@ -730,7 +713,7 @@ mod tests {
         assert_eq!(dns_servers[0], "94.140.14.14");
 
         // Verify Routing
-        assert_eq!(root["routing"]["domainStrategy"], "IPIfNonMatch");
+        assert_eq!(root["routing"]["domainStrategy"], "AsIs");
         let rules = root["routing"]["rules"].as_array().expect("rules");
         assert!(rules.len() >= 5);
     }

@@ -69,9 +69,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   ];
 
   const dpiOptions: { id: DpiBypassMode; label: string }[] = [
-    { id: 'SMART_FRAGMENT', label: 'Smart TLS Fragment (Recommended)' },
+    { id: 'OFF', label: 'Disabled (Direct - Fastest)' },
+    { id: 'SMART_FRAGMENT', label: 'Smart TLS Fragment (Anti-Censorship)' },
     { id: 'DEEP_STEALTH', label: 'Deep Stealth Engine' },
-    { id: 'OFF', label: 'Disabled (Direct)' },
     { id: 'CUSTOM', label: 'Custom Fragment' },
   ];
 

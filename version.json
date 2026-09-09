@@ -1,18 +1,18 @@
 {
-  "version": "1.1.0",
-  "versionCode": 11,
+  "version": "1.1.1",
+  "versionCode": 12,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Live Real-Time Diagnostic Logging: auto-streaming logs with instant UI refresh and 1000ms polling",
-    "Gigabit engine throughput: 4MB policy buffers, TCP keepalive, and low-latency dialing",
-    "Non-blocking asynchronous ping & DNS engine with IPv4 prioritization",
-    "Enhanced Windows & macOS system proxy validation with registry exit status checks",
-    "Diagnostic report includes live system proxy verification and up to 200 event records"
+    "Unthrottled line-rate engine: eliminated debug log I/O blocking for full 500+ Mbps throughput",
+    "Default to Direct connection (DpiBypassMode.OFF) matching Android high-speed standard",
+    "Optimized internal zero-copy buffer pool and 300s connection idle timeout",
+    "Removed redundant HTTP proxy TLS sniffing and enabled AsIs direct routing strategy",
+    "Stabilized Windows Winsock socket options for reliable gigabit throughput"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.0/ZeroTrace_1.1.0_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.1/ZeroTrace_1.1.1_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.0/ZeroTrace_1.1.0_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.1.1/ZeroTrace_1.1.1_aarch64.dmg"
   }
 }

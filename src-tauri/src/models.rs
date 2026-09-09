@@ -97,7 +97,7 @@ pub enum DpiBypassMode {
 
 impl Default for DpiBypassMode {
     fn default() -> Self {
-        DpiBypassMode::SmartFragment
+        DpiBypassMode::Off
     }
 }
 
@@ -124,7 +124,7 @@ impl Default for AppSettings {
             primary_dns: "94.140.14.14".to_string(), // AdGuard
             bypass_lan: true,
             sri_lanka_sni_tweak: "".to_string(),
-            dpi_bypass_mode: DpiBypassMode::SmartFragment,
+            dpi_bypass_mode: DpiBypassMode::Off,
             utls_fingerprint: "chrome".to_string(),
             mux_enabled: false,
             fragment_packets: "tlshello".to_string(),
