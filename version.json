@@ -1,17 +1,17 @@
 {
-  "version": "1.0.3",
-  "versionCode": 3,
+  "version": "1.0.5",
+  "versionCode": 5,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Native Wintun Layer-3 virtual adapter integration (ZeroTrace TUN)",
-    "Clean, de-cluttered Apple-style Software Update section",
-    "Silky smooth spring animations on tab switching and buttons",
-    "Dynamic versioning across all installer packages"
+    "Fix macOS Gatekeeper signature verification with ad-hoc bundle code signing",
+    "In-app direct updater: download and install updates seamlessly without opening browser",
+    "Native Wintun Layer-3 virtual adapter integration (ZeroTrace TUN) for Windows",
+    "Silky smooth spring animations and de-cluttered Apple-style settings UI"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.3/ZeroTrace_1.0.3_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.5/ZeroTrace_1.0.5_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.3/ZeroTrace_1.0.3_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.5/ZeroTrace_1.0.5_aarch64.dmg"
   }
 }
