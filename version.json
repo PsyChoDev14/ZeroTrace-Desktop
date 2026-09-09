@@ -1,17 +1,17 @@
 {
-  "version": "1.2.1",
-  "versionCode": 14,
+  "version": "1.2.2",
+  "versionCode": 15,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Fixed Wintun virtual adapter naming and IP configuration binding",
-    "Dual-protection routing: 100% leak-proof browser browsing and whole-device Layer 3 TUN",
-    "Sub-millisecond route print physical gateway discovery with PowerShell fallback",
-    "Clean route cleanup and stale process termination on shutdown and startup"
+    "Fixed gigabit throughput: tun2socks now uses MTU 9000 jumbo frames (gVisor TCP window 6x larger)",
+    "Removed QUIC/UDP-443 block so browsers can use HTTP/3 for maximum download speeds",
+    "Removed SOCKS5 sniffing overhead — TUN mode routes by network type, no per-packet deep inspection",
+    "Added TCP Fast Open on proxy outbound for lower latency connection establishment"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.1/ZeroTrace_1.2.1_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.2/ZeroTrace_1.2.2_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.1/ZeroTrace_1.2.1_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.2/ZeroTrace_1.2.2_aarch64.dmg"
   }
 }

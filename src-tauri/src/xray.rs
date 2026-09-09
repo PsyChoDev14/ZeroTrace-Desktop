@@ -74,11 +74,6 @@ impl XrayConfigGenerator {
                 "settings": {
                     "auth": "noauth",
                     "udp": true
-                },
-                "sniffing": {
-                    "enabled": true,
-                    "routeOnly": true,
-                    "destOverride": ["http", "tls", "quic"]
                 }
             }),
             json!({
@@ -207,15 +202,8 @@ impl XrayConfigGenerator {
             "outboundTag": "block"
         }));
 
-        // 6.3 Block QUIC / HTTP3 (UDP 443) to force fast TCP HTTPS
-        rules.push(json!({
-            "type": "field",
-            "port": "443",
-            "network": "udp",
-            "outboundTag": "block"
-        }));
 
-        // 6.4 Bypass LAN if enabled
+        // 6.3 Bypass LAN if enabled
         if settings.bypass_lan {
             rules.push(json!({
                 "type": "field",
@@ -470,7 +458,9 @@ impl XrayConfigGenerator {
         // Socket options
         let mut sockopt = json!({
             "tcpNoDelay": true,
-            "tcpKeepAlivePeriod": 15
+            "tcpKeepAlivePeriod": 15,
+            "tcpFastOpen": true,
+            "tcpMptcp": false
         });
         if is_dpi_fragment_active {
             sockopt["dialerProxy"] = json!("fragment");

@@ -67,6 +67,8 @@ impl WindowsTunManager {
                 "-device", "wintun",
                 "-proxy", "socks5://127.0.0.1:10808",
                 "-loglevel", "warning",
+                "-mtu", "9000",
+                "-udp-timeout", "60s",
             ]);
             cmd.stdout(std::process::Stdio::null());
             cmd.stderr(std::process::Stdio::null());
