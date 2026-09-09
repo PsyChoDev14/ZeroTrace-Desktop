@@ -357,6 +357,16 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
     println!("[Updater] Download complete. Launching installer in-place...");
 
     if is_windows {
+        // Strip any Mark-of-the-Web (Zone.Identifier) so Windows SmartScreen never blocks
+        let _ = std::process::Command::new("powershell")
+            .args(&[
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                &format!("Unblock-File -LiteralPath '{}'", installer_path.display()),
+            ])
+            .output();
+
         // Spawn NSIS setup installer directly
         std::process::Command::new(&installer_path)
             .spawn()
