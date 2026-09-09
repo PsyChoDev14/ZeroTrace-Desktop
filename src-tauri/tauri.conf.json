@@ -43,7 +43,13 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "timestampUrl": "",
+      "nsis": {
+        "sidebarImage": "icons/nsis-sidebar.bmp",
+        "headerImage": "icons/nsis-header.bmp",
+        "installerIcon": "icons/icon.ico",
+        "installMode": "both"
+      }
     },
     "resources": [
       "binaries/*"
