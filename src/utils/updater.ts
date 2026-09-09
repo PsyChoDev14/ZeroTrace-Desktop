@@ -11,7 +11,7 @@ export interface AppUpdateInfo {
   };
 }
 
-export const CURRENT_APP_VERSION = '1.0.8';
+export const CURRENT_APP_VERSION = '1.0.9';
 
 const GITHUB_API_LATEST = 'https://api.github.com/repos/PsyChoDev14/ZeroTrace-Desktop/releases/latest';
 const MANIFEST_URL = 'https://raw.githubusercontent.com/PsyChoDev14/ZeroTrace-Desktop/main/version.json';

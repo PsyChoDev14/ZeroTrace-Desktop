@@ -119,6 +119,12 @@ async function mockInvoke(cmd: string, args: Record<string, unknown>): Promise<u
         uptimeSeconds: mockVpnState.connectedAt ? Math.floor((Date.now() - mockVpnState.connectedAt) / 1000) : 0,
       } as TrafficStats;
     }
+    case 'open_url': {
+      if (typeof window !== 'undefined' && args.url) {
+        window.open(args.url as string, '_blank', 'noopener,noreferrer');
+      }
+      return true;
+    }
     default:
       console.warn(`[mockInvoke] Unknown command: ${cmd}`, args);
       return null;
@@ -142,4 +148,19 @@ export const api = {
   getLogs: () => invokeTauri<DiagnosticLog[]>('get_logs'),
   clearLogs: () => invokeTauri<boolean>('clear_logs'),
   getTrafficStats: () => invokeTauri<TrafficStats>('get_traffic_stats'),
+  openUrl: (url: string) => invokeTauri<void>('open_url', { url }),
 };
+
+export async function openExternalUrl(url: string): Promise<void> {
+  if (isTauri()) {
+    try {
+      await api.openUrl(url);
+      return;
+    } catch (e) {
+      console.error('Failed to open URL via Tauri:', e);
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}

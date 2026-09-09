@@ -86,6 +86,7 @@ pub fn run() {
             window_maximize,
             window_close,
             download_and_install_update,
+            open_url,
         ]);
 
     app_builder

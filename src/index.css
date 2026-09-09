@@ -142,4 +142,13 @@ button:active {
   transform: scale(0.97);
 }
 
+@keyframes progressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-progress-shimmer {
+  animation: progressShimmer 2s infinite ease-in-out;
+}
+
 

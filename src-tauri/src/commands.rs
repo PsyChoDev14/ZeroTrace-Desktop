@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use parking_lot::Mutex;
-use tauri::State;
+use tauri::{Emitter, State};
 
 use crate::models::{AppSettings, DiagnosticLog, ProxyConfig, TrafficStats, VpnState};
 use crate::parser::ConfigParser;
@@ -324,8 +324,18 @@ pub fn window_close(window: tauri::WebviewWindow) {
     let _ = window.close();
 }
 
+#[derive(Clone, serde::Serialize)]
+pub struct DownloadProgressPayload {
+    pub percent: f64,
+    pub stage: String,
+    pub detail: String,
+}
+
 #[tauri::command]
-pub async fn download_and_install_update(url: String) -> Result<String, String> {
+pub async fn download_and_install_update(
+    window: tauri::WebviewWindow,
+    url: String,
+) -> Result<String, String> {
     let is_windows = cfg!(windows);
     let temp_dir = std::env::temp_dir();
     let installer_path = if is_windows {
@@ -336,9 +346,26 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
 
     println!("[Updater] In-app download starting from: {} to {:?}", url, installer_path);
 
-    // Download directly via system curl (built-in on Windows 10/11 & macOS)
-    let output = std::process::Command::new("curl")
+    let emit_progress = |percent: f64, stage: &str, detail: &str| {
+        let _ = window.emit(
+            "update-download-progress",
+            DownloadProgressPayload {
+                percent,
+                stage: stage.to_string(),
+                detail: detail.to_string(),
+            },
+        );
+    };
+
+    emit_progress(0.0, "downloading", "Starting download...");
+
+    // Remove any leftover file from earlier runs
+    let _ = std::fs::remove_file(&installer_path);
+
+    // Download directly via system curl with -# (streaming progress meter)
+    let mut child = std::process::Command::new("curl")
         .args(&[
+            "-#",
             "-L",
             "--retry", "3",
             "--fail",
@@ -346,17 +373,53 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
             installer_path.to_str().ok_or("Invalid temp path")?,
             &url,
         ])
-        .output()
-        .map_err(|e| format!("Download failed: {}", e))?;
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn download: {}", e))?;
 
-    if !output.status.success() {
-        let err_msg = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Download failed: {}", err_msg));
+    if let Some(stderr) = child.stderr.take() {
+        use std::io::Read;
+        let mut reader = std::io::BufReader::new(stderr);
+        let mut token = Vec::new();
+        let mut byte = [0u8; 1];
+        let mut last_emitted = -1;
+
+        while let Ok(n) = reader.read(&mut byte) {
+            if n == 0 {
+                break;
+            }
+            let b = byte[0];
+            if b == b'\r' || b == b'\n' {
+                let text = String::from_utf8_lossy(&token);
+                if let Some(pos) = text.rfind('%') {
+                    let before = &text[..pos];
+                    if let Some(start) = before.rfind(|c: char| c.is_whitespace() || c == '#') {
+                        if let Ok(pct) = before[start + 1..].trim().parse::<f64>() {
+                            let rounded = pct.round() as i32;
+                            if rounded != last_emitted {
+                                last_emitted = rounded;
+                                emit_progress(pct, "downloading", &format!("{:.0}% downloaded", pct));
+                            }
+                        }
+                    }
+                }
+                token.clear();
+            } else {
+                token.push(b);
+            }
+        }
     }
 
-    println!("[Updater] Download complete. Launching installer in-place...");
+    let status = child.wait().map_err(|e| format!("Download process failed: {}", e))?;
+    if !status.success() {
+        return Err("Download failed. Please check your internet connection.".to_string());
+    }
+
+    emit_progress(100.0, "verifying", "Verifying package integrity...");
 
     if is_windows {
+        emit_progress(100.0, "installing", "Launching ZeroTrace installer...");
+
         // Strip any Mark-of-the-Web (Zone.Identifier) so Windows SmartScreen never blocks
         let _ = std::process::Command::new("powershell")
             .args(&[
@@ -376,7 +439,7 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
         tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
         std::process::exit(0);
     } else {
-        println!("[Updater] Silently mounting and installing DMG to /Applications in background...");
+        emit_progress(100.0, "installing", "Installing update to /Applications...");
 
         let mount_point = "/tmp/ZeroTraceUpdateMount";
         let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
@@ -426,6 +489,8 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
         let _ = std::fs::remove_dir_all(mount_point);
         let _ = std::fs::remove_file(&installer_path);
 
+        emit_progress(100.0, "restarting", "Restarting ZeroTrace...");
+
         // 5. Relaunch new version of ZeroTrace after current process exits cleanly
         println!("[Updater] Scheduling relaunch of /Applications/ZeroTrace.app...");
         let my_pid = std::process::id();
@@ -441,6 +506,34 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
         std::process::exit(0);
     }
 
+    #[allow(unreachable_code)]
     Ok("Update installed and application restarted".to_string())
 }
+
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(&["/c", "start", "", &url])
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+    }
+    Ok(())
+}
+
 
