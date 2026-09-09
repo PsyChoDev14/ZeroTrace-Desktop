@@ -251,7 +251,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5 block">
           Support
         </span>
-        <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden shadow-sm">
+        <div className="rounded-2xl bg-white/5 border border-white/10 divide-y divide-white/5 overflow-hidden shadow-sm">
           <button
             onClick={handleContactWhatsApp}
             className="w-full px-3.5 py-3 flex items-center justify-between text-xs hover:bg-emerald-500/[0.07] active:bg-emerald-500/[0.12] transition-all cursor-pointer outline-none group text-left"
@@ -281,6 +281,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <ExternalLink size={12} className="text-white/40 group-hover:text-emerald-300" />
             </div>
           </button>
+
+          {/* Diagnostic Logs & Send Report */}
+          {onOpenLogs && (
+            <button
+              onClick={onOpenLogs}
+              className="w-full px-3.5 py-3 flex items-center justify-between text-xs hover:bg-white/5 active:bg-white/8 transition-all cursor-pointer outline-none group text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+                  <Terminal size={15} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-white/90 group-hover:text-white transition-colors">
+                    Send Diagnostic Report
+                  </span>
+                  <span className="text-[11px] text-white/40 mt-0.5">
+                    Capture & share real-time logs with support
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-white/30 group-hover:text-blue-400 transition-colors">
+                <span className="text-[11px] font-medium text-white/40 group-hover:text-blue-300">
+                  Export
+                </span>
+                <ChevronRight size={13} />
+              </div>
+            </button>
+          )}
         </div>
       </div>
 

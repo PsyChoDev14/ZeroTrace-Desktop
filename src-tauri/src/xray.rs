@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
+use std::sync::Arc;
 use serde_json::{json, Value};
 
 use crate::models::{AppSettings, DpiBypassMode, ProxyConfig, ProxyProtocol};
@@ -486,17 +487,20 @@ impl XrayProcess {
         }
     }
 
-    pub fn start(&mut self, config_json: &str, app_dir: &Path) -> Result<(), String> {
+    pub fn start(
+        &mut self,
+        config_json: &str,
+        app_dir: &Path,
+        log_fn: Option<Arc<dyn Fn(&str, &str, &str) + Send + Sync + 'static>>,
+    ) -> Result<(), String> {
         self.stop();
 
-        let xray_dir = app_dir.join("xray");
-        std::fs::create_dir_all(&xray_dir).map_err(|e| e.to_string())?;
-
-        let config_path = xray_dir.join("config.json");
-        std::fs::write(&config_path, config_json).map_err(|e| e.to_string())?;
+        // Write configuration to temporary runtime file
+        let config_path = app_dir.join("runtime_config.json");
+        std::fs::write(&config_path, config_json)
+            .map_err(|e| format!("Failed to write runtime config: {}", e))?;
         self.config_file_path = Some(config_path.clone());
 
-        // Find xray binary across all potential install and development directories
         let binary_name = if cfg!(windows) { "xray.exe" } else { "xray" };
         let mut candidate_paths: Vec<PathBuf> = Vec::new();
 
@@ -535,6 +539,8 @@ impl XrayProcess {
 
         let mut cmd = Command::new(&binary_to_run);
         cmd.arg("run").arg("-config").arg(&config_path);
+        cmd.stdout(std::process::Stdio::piped());
+        cmd.stderr(std::process::Stdio::piped());
 
         #[cfg(windows)]
         {
@@ -544,7 +550,42 @@ impl XrayProcess {
         }
 
         match cmd.spawn() {
-            Ok(child) => {
+            Ok(mut child) => {
+                if let Some(log_cb) = log_fn {
+                    if let Some(stderr) = child.stderr.take() {
+                        let cb = Arc::clone(&log_cb);
+                        std::thread::spawn(move || {
+                            use std::io::{BufRead, BufReader};
+                            let reader = BufReader::new(stderr);
+                            for line in reader.lines().flatten() {
+                                let trimmed = line.trim();
+                                if !trimmed.is_empty() {
+                                    let level = if trimmed.contains("[Warning]") {
+                                        "WARN"
+                                    } else if trimmed.contains("[Error]") || trimmed.contains("failed") || trimmed.contains("Failed") {
+                                        "ERROR"
+                                    } else {
+                                        "INFO"
+                                    };
+                                    cb(level, "Xray-Core", trimmed);
+                                }
+                            }
+                        });
+                    }
+                    if let Some(stdout) = child.stdout.take() {
+                        let cb = Arc::clone(&log_cb);
+                        std::thread::spawn(move || {
+                            use std::io::{BufRead, BufReader};
+                            let reader = BufReader::new(stdout);
+                            for line in reader.lines().flatten() {
+                                let trimmed = line.trim();
+                                if !trimmed.is_empty() {
+                                    cb("INFO", "Xray-Core", trimmed);
+                                }
+                            }
+                        });
+                    }
+                }
                 self.child = Some(child);
                 println!("[XrayProcess] Xray runtime engine spawned successfully (PID: {:?})", self.child.as_ref().map(|c| c.id()));
                 Ok(())

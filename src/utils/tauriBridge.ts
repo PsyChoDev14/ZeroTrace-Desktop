@@ -125,6 +125,9 @@ async function mockInvoke(cmd: string, args: Record<string, unknown>): Promise<u
       }
       return true;
     }
+    case 'export_diagnostic_report': {
+      return `=== ZeroTrace Diagnostic Report (Preview Mode) ===\nTime: ${new Date().toISOString()}\nPlatform: Web Preview\nLogs Count: ${mockLogs.length}\n${mockLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n')}`;
+    }
     default:
       console.warn(`[mockInvoke] Unknown command: ${cmd}`, args);
       return null;
@@ -149,6 +152,7 @@ export const api = {
   clearLogs: () => invokeTauri<boolean>('clear_logs'),
   getTrafficStats: () => invokeTauri<TrafficStats>('get_traffic_stats'),
   openUrl: (url: string) => invokeTauri<void>('open_url', { url }),
+  exportDiagnosticReport: () => invokeTauri<string>('export_diagnostic_report'),
 };
 
 export async function openExternalUrl(url: string): Promise<void> {

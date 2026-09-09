@@ -81,10 +81,15 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
         None,
     );
 
-    // 2. Start Xray-Core engine
+    // 2. Start Xray-Core engine with real-time log streaming
     {
+        let state_clone = state.inner().clone();
+        let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
+            state_clone.lock().add_log(level, tag, msg);
+        });
+
         let mut ctx = state.lock();
-        if let Err(e) = ctx.xray_process.start(&xray_json, &app_dir) {
+        if let Err(e) = ctx.xray_process.start(&xray_json, &app_dir, Some(log_cb)) {
             ctx.vpn_state = VpnState {
                 status: "error".to_string(),
                 server_name: None,
@@ -534,6 +539,49 @@ pub fn open_url(url: String) -> Result<(), String> {
             .map_err(|e| format!("Failed to open URL: {}", e))?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn export_diagnostic_report(state: State<SharedState>) -> String {
+    let ctx = state.lock();
+    let os_info = format!("{} ({})", std::env::consts::OS, std::env::consts::ARCH);
+    let vpn_status = format!("Status: {}, Error: {:?}", ctx.vpn_state.status, ctx.vpn_state.error_message);
+    let active_cfg = ctx.selected_id.as_ref().and_then(|id| ctx.configs.iter().find(|c| &c.id == id));
+    let cfg_summary = if let Some(c) = active_cfg {
+        format!("Protocol: {:?}, Server: {}:{}, Network: {}, Security: {}, SNI: {}", 
+            c.protocol, c.server, c.port, c.network, c.security, c.sni)
+    } else {
+        "None selected".to_string()
+    };
+    
+    let logs_text = ctx.logs.iter().rev().take(80).rev()
+        .map(|l| format!("[{}] [{}] [{}]: {}", l.timestamp, l.level, l.tag, l.message))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    format!(
+        "=== ZeroTrace Desktop Diagnostic Report ===\n\
+        Time: {}\n\
+        Platform: {}\n\
+        VPN State: {}\n\
+        Active Config: {}\n\
+        Primary DNS: {}\n\
+        DPI Mode: {:?}\n\
+        Kill Switch: {}\n\
+        Bypass LAN: {}\n\
+        \n--- Diagnostic Logs (Last {} entries) ---\n{}\n\
+        === End of Report ===",
+        chrono::Utc::now().to_rfc3339(),
+        os_info,
+        vpn_status,
+        cfg_summary,
+        ctx.settings.primary_dns,
+        ctx.settings.dpi_bypass_mode,
+        ctx.settings.kill_switch,
+        ctx.settings.bypass_lan,
+        ctx.logs.len(),
+        logs_text
+    )
 }
 
 

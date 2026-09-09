@@ -87,6 +87,7 @@ pub fn run() {
             window_close,
             download_and_install_update,
             open_url,
+            export_diagnostic_report,
         ]);
 
     app_builder

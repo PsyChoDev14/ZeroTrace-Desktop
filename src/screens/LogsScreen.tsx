@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Terminal, Trash2, Copy, Check, ArrowLeft } from 'lucide-react';
+import { Terminal, Trash2, Copy, Check, ArrowLeft, Download, MessageCircle } from 'lucide-react';
 import { DiagnosticLog } from '../types';
+import { api, openExternalUrl } from '../utils/tauriBridge';
 
 interface LogsScreenProps {
   logs: DiagnosticLog[];
@@ -11,6 +12,8 @@ interface LogsScreenProps {
 export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack }) => {
   const [copied, setCopied] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
+  const [isSending, setIsSending] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const filteredLogs = logs.filter(l => filterLevel === 'ALL' || l.level === filterLevel);
 
@@ -19,6 +22,42 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSendToSupport = async () => {
+    try {
+      setIsSending(true);
+      const report = await api.exportDiagnosticReport();
+      await navigator.clipboard.writeText(report);
+      setToastMsg('Report copied! Opening WhatsApp support…');
+      setTimeout(() => {
+        openExternalUrl('https://wa.me/94788385465?text=Hello%20ZeroTrace%20Support%2C%20here%20is%20my%20diagnostic%20report%20(pasting%20below)...');
+      }, 500);
+      setTimeout(() => setToastMsg(null), 3500);
+    } catch (e) {
+      console.error('Failed to export diagnostic report:', e);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      const report = await api.exportDiagnosticReport();
+      const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZeroTrace-Diagnostics-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setToastMsg('Saved diagnostic log file!');
+      setTimeout(() => setToastMsg(null), 2500);
+    } catch (e) {
+      console.error('Failed to download report:', e);
+    }
   };
 
   const getLevelBadge = (level: string) => {
@@ -36,7 +75,7 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
       <div className="flex items-center gap-2.5 pb-2.5 border-b border-zt-border shrink-0">
         <button
           onClick={onBack}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors shrink-0"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors shrink-0 cursor-pointer"
           title="Back to Previous Screen"
         >
           <ArrowLeft size={16} />
@@ -46,42 +85,71 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
             <Terminal size={16} className="text-zt-accent shrink-0" />
             <span>Diagnostics & Core Logs</span>
           </h1>
-          <p className="text-[10px] text-zt-text-muted truncate">Xray engine & Wintun adapter events</p>
+          <p className="text-[10px] text-zt-text-muted truncate">Real-time engine events & connection diagnostics</p>
         </div>
       </div>
 
-      {/* 2. Compact Action Toolbar (Never overflows in portrait) */}
-      <div className="flex items-center justify-between gap-2 my-2.5 shrink-0">
-        {/* Level Filter Dropdown */}
-        <select
-          value={filterLevel}
-          onChange={e => setFilterLevel(e.target.value)}
-          className="flex-1 rounded-xl bg-zt-surface border border-zt-border px-2.5 py-1.5 text-xs font-mono text-zt-text focus:outline-none cursor-pointer"
-        >
-          <option value="ALL">All Levels</option>
-          <option value="INFO">INFO</option>
-          <option value="DEBUG">DEBUG</option>
-          <option value="WARN">WARN</option>
-          <option value="ERROR">ERROR</option>
-        </select>
+      {/* 2. Compact Action Toolbar */}
+      <div className="space-y-2 my-2.5 shrink-0">
+        {/* Row 1: Filter, Copy, Clear */}
+        <div className="flex items-center justify-between gap-2">
+          <select
+            value={filterLevel}
+            onChange={e => setFilterLevel(e.target.value)}
+            className="flex-1 rounded-xl bg-zt-surface border border-zt-border px-2.5 py-1.5 text-xs font-mono text-zt-text focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">All Levels</option>
+            <option value="INFO">INFO</option>
+            <option value="DEBUG">DEBUG</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+          </select>
 
-        {/* Copy Button */}
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:border-zt-border-strong text-xs font-semibold text-zt-text transition-colors shrink-0"
-        >
-          {copied ? <Check size={13} className="text-zt-success" /> : <Copy size={13} />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:border-zt-border-strong text-xs font-semibold text-zt-text transition-colors shrink-0 cursor-pointer active:scale-95"
+          >
+            {copied ? <Check size={13} className="text-zt-success" /> : <Copy size={13} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
 
-        {/* Clear Button */}
-        <button
-          onClick={onClear}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:text-zt-danger hover:border-zt-danger/40 text-xs font-semibold text-zt-text-muted transition-colors shrink-0"
-        >
-          <Trash2 size={13} />
-          <span>Clear</span>
-        </button>
+          <button
+            onClick={onClear}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zt-surface border border-zt-border hover:text-zt-danger hover:border-zt-danger/40 text-xs font-semibold text-zt-text-muted transition-colors shrink-0 cursor-pointer active:scale-95"
+          >
+            <Trash2 size={13} />
+            <span>Clear</span>
+          </button>
+        </div>
+
+        {/* Row 2: Send to Support & Download Report */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSendToSupport}
+            disabled={isSending}
+            className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 outline-none"
+          >
+            <MessageCircle size={14} />
+            <span>Send to WhatsApp Support</span>
+          </button>
+
+          <button
+            onClick={handleDownloadReport}
+            className="py-1.5 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer active:scale-95 outline-none"
+            title="Export full diagnostic report as .txt file"
+          >
+            <Download size={13} />
+            <span>Save .txt</span>
+          </button>
+        </div>
+
+        {/* Toast notification */}
+        {toastMsg && (
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs flex items-center gap-1.5 animate-fade-in font-medium">
+            <Check size={13} />
+            <span>{toastMsg}</span>
+          </div>
+        )}
       </div>
 
       {/* 3. Terminal Viewport */}
@@ -112,3 +180,4 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs, onClear, onBack })
     </div>
   );
 };
+
