@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --zt-bg: #08080A;
+    --zt-bg-elevated: #0E0E11;
+    --zt-surface: #141417;
+    --zt-surface-2: #1B1B20;
+    --zt-border: #26262C;
+    --zt-border-strong: #33333B;
+    --zt-accent: #5468FF;
+    --zt-accent-soft: rgba(84, 104, 255, 0.14);
+    --zt-success: #35C77B;
+    --zt-danger: #F0533D;
+    --zt-warn: #E5A33C;
+  }
+
+  body {
+    background-color: var(--zt-bg);
+    color: #F4F4F6;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Custom Scrollbar for sleek dark glass look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #26262C;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #33333B;
+}
+
+.liquid-glass {
+  background: linear-gradient(180deg, rgba(19, 21, 31, 0.88) 0%, rgba(11, 13, 19, 0.95) 100%);
+  border: 1px solid transparent;
+  border-image: linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.06) 40%, rgba(255, 255, 255, 0.02) 100%) 1;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.liquid-card {
+  background: #141417;
+  border: 1px solid #26262C;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateZ(0);
+}
+.liquid-card:hover {
+  border-color: #33333B;
+  background: #18181D;
+}
+
+@keyframes laserSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes ambientDrift {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulseAura {
+  0%, 100% { transform: scale(0.96); opacity: 0.20; }
+  50% { transform: scale(1.08); opacity: 0.48; }
+}
+
+.laser-spinner {
+  animation: laserSpin 1.2s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box; /* Required for WebKit SVG transform-origin to work */
+  will-change: transform;
+}
+
+.ambient-drift {
+  animation: ambientDrift 8s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box; /* Required for WebKit SVG transform-origin to work */
+  will-change: transform;
+}
+
+.breathing-halo {
+  animation: pulseAura 2.2s ease-in-out infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
