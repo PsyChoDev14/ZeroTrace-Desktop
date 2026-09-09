@@ -324,3 +324,60 @@ pub fn window_close(window: tauri::WebviewWindow) {
     let _ = window.close();
 }
 
+#[tauri::command]
+pub async fn download_and_install_update(url: String) -> Result<String, String> {
+    let is_windows = cfg!(windows);
+    let temp_dir = std::env::temp_dir();
+    let installer_path = if is_windows {
+        temp_dir.join("ZeroTrace-Update-Setup.exe")
+    } else {
+        temp_dir.join("ZeroTrace-Update.dmg")
+    };
+
+    println!("[Updater] In-app download starting from: {} to {:?}", url, installer_path);
+
+    // Download directly via system curl (built-in on Windows 10/11 & macOS)
+    let output = std::process::Command::new("curl")
+        .args(&[
+            "-L",
+            "--retry", "3",
+            "--fail",
+            "-o",
+            installer_path.to_str().ok_or("Invalid temp path")?,
+            &url,
+        ])
+        .output()
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Download failed: {}", err_msg));
+    }
+
+    println!("[Updater] Download complete. Launching installer in-place...");
+
+    if is_windows {
+        // Spawn NSIS setup installer directly
+        std::process::Command::new(&installer_path)
+            .spawn()
+            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+
+        // Give installer a moment to start, then exit to release file locks
+        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+        std::process::exit(0);
+    } else {
+        // Remove Gatekeeper quarantine flag so macOS doesn't say "damaged"
+        let _ = std::process::Command::new("xattr")
+            .args(&["-cr", installer_path.to_str().unwrap()])
+            .output();
+
+        // Mount and open DMG directly without browser
+        std::process::Command::new("open")
+            .arg(&installer_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open DMG: {}", e))?;
+    }
+
+    Ok("Installer launched successfully".to_string())
+}
+
