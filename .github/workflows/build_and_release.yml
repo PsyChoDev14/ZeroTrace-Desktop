@@ -9,9 +9,18 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release Tag (e.g. v1.0.0)'
+        description: 'Release Tag (e.g. v1.0.9)'
         required: false
-        default: 'v1.0.0'
+        default: 'v1.0.9'
+      target_platform:
+        description: 'Target Platform to build'
+        required: true
+        type: choice
+        options:
+          - 'windows'
+          - 'all'
+          - 'macos'
+        default: 'windows'
       publish_release:
         description: 'Publish as GitHub Release'
         required: false
@@ -25,6 +34,7 @@ jobs:
   build-windows:
     name: Build Windows (.exe & .msi)
     runs-on: windows-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'windows'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -144,6 +154,7 @@ jobs:
   build-macos:
     name: Build macOS (.dmg)
     runs-on: macos-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'macos'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

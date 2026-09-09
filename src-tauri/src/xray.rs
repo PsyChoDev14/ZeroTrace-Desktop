@@ -82,25 +82,6 @@ impl XrayConfigGenerator {
             })
         ];
 
-        #[cfg(windows)]
-        {
-            inbounds.push(json!({
-                "tag": "tun-in",
-                "protocol": "tun",
-                "settings": {
-                    "name": "ZeroTrace TUN",
-                    "mtu": 1500,
-                    "gateway": ["10.233.233.1/24"],
-                    "dns": [&settings.primary_dns, "1.1.1.1"],
-                    "autoSystemRoutingTable": ["0.0.0.0/0"]
-                },
-                "sniffing": {
-                    "enabled": true,
-                    "destOverride": ["http", "tls", "quic"]
-                }
-            }));
-        }
-
         // 4. Outbounds
         let mut outbounds = Vec::new();
 
@@ -368,7 +349,8 @@ impl XrayConfigGenerator {
                 outbound["streamSettings"] = Self::build_stream_settings(config, settings, is_dpi_fragment_active);
             }
             ProxyProtocol::CustomJson => {
-                if let Ok(parsed) = serde_json::from_str::<Value>(&config.raw_config) {
+                if let Ok(mut parsed) = serde_json::from_str::<Value>(&config.raw_config) {
+                    Self::sanitize_deprecated_xray_fields(&mut parsed);
                     return parsed;
                 }
                 outbound["protocol"] = json!("freedom");
@@ -377,6 +359,23 @@ impl XrayConfigGenerator {
         }
 
         outbound
+    }
+
+    fn sanitize_deprecated_xray_fields(val: &mut Value) {
+        match val {
+            Value::Object(map) => {
+                map.remove("allowInsecure");
+                for (_, v) in map.iter_mut() {
+                    Self::sanitize_deprecated_xray_fields(v);
+                }
+            }
+            Value::Array(arr) => {
+                for v in arr.iter_mut() {
+                    Self::sanitize_deprecated_xray_fields(v);
+                }
+            }
+            _ => {}
+        }
     }
 
     fn build_stream_settings(
@@ -423,7 +422,10 @@ impl XrayConfigGenerator {
                 "fingerprint": effective_fp,
                 "alpn": ["http/1.1", "h2"]
             });
-            if !config.sni.is_empty() && config.sni != config.server {
+            // When SNI differs from server (e.g. bug host or carrier tweak),
+            // verify the real server certificate CN/SAN instead of SNI.
+            // This replaces the deprecated/removed allowInsecure flag in modern Xray core.
+            if !effective_sni.is_empty() && effective_sni != config.server {
                 tls_settings["verifyPeerCertByName"] = json!(config.server);
             }
             stream["tlsSettings"] = tls_settings;
