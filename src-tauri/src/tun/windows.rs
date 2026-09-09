@@ -274,32 +274,12 @@ impl WindowsTunManager {
 
     fn refresh_wininet() {
         #[cfg(windows)]
-        {
-            type InternetSetOptionType = unsafe extern "system" fn(
-                usize,
-                u32,
-                *const std::ffi::c_void,
-                u32,
-            ) -> i32;
-
-            const INTERNET_OPTION_SETTINGS_CHANGED: u32 = 39;
-            const INTERNET_OPTION_REFRESH: u32 = 37;
-
-            unsafe {
-                use std::ffi::CString;
-                let lib_name = CString::new("wininet.dll").unwrap();
-                let proc_name = CString::new("InternetSetOptionA").unwrap();
-                let handle = windows_sys::Win32::System::LibraryLoader::LoadLibraryA(lib_name.as_ptr() as _);
-                if !handle.is_null() {
-                    let func_ptr = windows_sys::Win32::System::LibraryLoader::GetProcAddress(handle, proc_name.as_ptr() as _);
-                    if let Some(func_ptr) = func_ptr {
-                        let internet_set_option: InternetSetOptionType = std::mem::transmute(func_ptr);
-                        internet_set_option(0, INTERNET_OPTION_SETTINGS_CHANGED, std::ptr::null(), 0);
-                        internet_set_option(0, INTERNET_OPTION_REFRESH, std::ptr::null(), 0);
-                    }
-                    windows_sys::Win32::System::LibraryLoader::FreeLibrary(handle);
-                }
-            }
+        unsafe {
+            use windows_sys::Win32::Networking::WinInet::{
+                InternetSetOptionA, INTERNET_OPTION_REFRESH, INTERNET_OPTION_SETTINGS_CHANGED,
+            };
+            InternetSetOptionA(std::ptr::null(), INTERNET_OPTION_SETTINGS_CHANGED, std::ptr::null(), 0);
+            InternetSetOptionA(std::ptr::null(), INTERNET_OPTION_REFRESH, std::ptr::null(), 0);
         }
     }
 }

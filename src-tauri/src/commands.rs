@@ -7,6 +7,7 @@ use crate::parser::ConfigParser;
 use crate::ping::PingEngine;
 use crate::storage::StorageManager;
 use crate::tun::TunManager;
+#[allow(unused_imports)]
 use crate::xray::{XrayConfigGenerator, XrayProcess};
 
 pub struct AppContext {
