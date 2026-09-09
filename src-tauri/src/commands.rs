@@ -123,8 +123,9 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
 
     // 3. Establish Wintun virtual adapter & configure Windows IP routing table
     {
+        let server_target = resolved_ip.as_deref().unwrap_or(&config.server);
         let mut ctx = state.lock();
-        if let Err(e) = ctx.tun_manager.start_tunnel(&config.server, config.port, &settings.primary_dns) {
+        if let Err(e) = ctx.tun_manager.start_tunnel(server_target, config.port, &settings.primary_dns) {
             ctx.xray_process.stop();
             ctx.vpn_state = VpnState {
                 status: "error".to_string(),
@@ -133,7 +134,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
                 connected_at: None,
                 error_message: Some(e.clone()),
             };
-            ctx.add_log("ERROR", "ProxyManager", &format!("Failed to activate system proxy: {}", e));
+            ctx.add_log("ERROR", "TunManager", &format!("Failed to activate tunnel: {}", e));
             return Err(e);
         }
 
@@ -145,7 +146,7 @@ pub async fn connect(config_id: Option<String>, state: State<'_, SharedState>) -
             connected_at: Some(now),
             error_message: None,
         };
-        ctx.add_log("INFO", "ProxyManager", "System proxy active (127.0.0.1:10809). Traffic routed through encrypted tunnel.");
+        ctx.add_log("INFO", "TunManager", "Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
     }
 
     Ok(true)
