@@ -1,18 +1,17 @@
 {
-  "version": "1.3.1",
-  "versionCode": 18,
+  "version": "1.3.2",
+  "versionCode": 19,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Fixed Sing-box v1.14.0 modern DNS server format (type: udp/local) & TUN address array",
-    "Added hijack-dns route rule action for kernel packet DNS capture",
-    "Native Windows Wintun Layer 3 TUN mode active with mixed stack (Windows TCP stack parity with Throne)",
-    "Direct line-rate gigabit throughput up to 600–750+ Mbps on Windows",
-    "Preserved frictionless zero-root high-speed system proxy on macOS"
+    "Fixed TLS certificate verification when using SNI tweaks / bug hosts (e.g. api.zoom.us)",
+    "Added insecure: true to outbound TLS to support carrier zero-rating SNI spoofing without certificate rejection",
+    "Added route.final: proxy to guarantee all non-bypassed traffic flows through the high-speed tunnel",
+    "Direct line-rate gigabit throughput up to 600–750+ Mbps on Windows Wintun"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.1/ZeroTrace_1.3.1_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.2/ZeroTrace_1.3.2_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.1/ZeroTrace_1.3.1_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.2/ZeroTrace_1.3.2_aarch64.dmg"
   }
 }

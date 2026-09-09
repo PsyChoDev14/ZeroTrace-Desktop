@@ -95,6 +95,7 @@ impl SingboxConfigGenerator {
         let route = json!({
             "default_domain_resolver": "dns-direct",
             "rules": route_rules,
+            "final": "proxy",
             "auto_detect_interface": true
         });
 
@@ -155,6 +156,7 @@ impl SingboxConfigGenerator {
                     let mut tls = json!({
                         "enabled": true,
                         "server_name": effective_sni,
+                        "insecure": true,
                         "utls": {
                             "enabled": true,
                             "fingerprint": effective_fp
@@ -195,6 +197,7 @@ impl SingboxConfigGenerator {
                     outbound["tls"] = json!({
                         "enabled": true,
                         "server_name": effective_sni,
+                        "insecure": true,
                         "utls": {
                             "enabled": true,
                             "fingerprint": effective_fp
@@ -222,6 +225,7 @@ impl SingboxConfigGenerator {
                     outbound["tls"] = json!({
                         "enabled": true,
                         "server_name": effective_sni,
+                        "insecure": true,
                         "utls": {
                             "enabled": true,
                             "fingerprint": effective_fp
@@ -373,13 +377,68 @@ mod tests {
         // Verify Route (sing-box 1.14+ format)
         let route = &root["route"];
         assert_eq!(route["default_domain_resolver"], "dns-direct");
+        assert_eq!(route["final"], "proxy");
         assert_eq!(route["rules"][0]["action"], "hijack-dns");
 
         // Verify Outbound
         let outbounds = root["outbounds"].as_array().expect("outbounds array");
         assert_eq!(outbounds[0]["type"], "vless");
+        assert_eq!(outbounds[0]["tls"]["insecure"], true);
         assert_eq!(outbounds[0]["tls"]["reality"]["public_key"], "fake_reality_pbk");
         assert_eq!(outbounds[0]["tls"]["reality"]["short_id"], "8a9b0c1d");
         assert_eq!(outbounds[0]["tls"]["server_name"], "www.microsoft.com");
+    }
+
+    #[test]
+    fn test_singbox_vless_tls_sni_spoof() {
+        let config = ProxyConfig {
+            id: "test-slt-zoom".to_string(),
+            name: "Slt-zoom-pakaya43".to_string(),
+            protocol: ProxyProtocol::Vless,
+            server: "node1.novalink.lk".to_string(),
+            port: 45535,
+            uuid: "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e".to_string(),
+            security: "tls".to_string(),
+            network: "tcp".to_string(),
+            sni: "api.zoom.us".to_string(),
+            path: "".to_string(),
+            flow: "".to_string(),
+            public_key: "".to_string(),
+            short_id: "".to_string(),
+            fingerprint: "chrome".to_string(),
+            service_name: "".to_string(),
+            alter_id: 0,
+            cipher: "auto".to_string(),
+            raw_config: "".to_string(),
+            ping_ms: 25,
+            created_at: 0,
+        };
+
+        let settings = AppSettings {
+            primary_dns: "94.140.14.14".to_string(),
+            bypass_lan: true,
+            sri_lanka_sni_tweak: "".to_string(),
+            dpi_bypass_mode: crate::models::DpiBypassMode::Off,
+            utls_fingerprint: "chrome".to_string(),
+            mux_enabled: false,
+            fragment_packets: "".to_string(),
+            fragment_length: "".to_string(),
+            fragment_interval: "".to_string(),
+            kill_switch: true,
+            auto_connect: false,
+            minimize_to_tray: true,
+        };
+
+        let json_str = SingboxConfigGenerator::generate_runtime_json(
+            &config,
+            &settings,
+            Some("172.104.47.65"),
+        );
+
+        let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
+        let outbounds = root["outbounds"].as_array().expect("outbounds array");
+        assert_eq!(outbounds[0]["type"], "vless");
+        assert_eq!(outbounds[0]["tls"]["server_name"], "api.zoom.us");
+        assert_eq!(outbounds[0]["tls"]["insecure"], true);
     }
 }
