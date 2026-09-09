@@ -1,6 +1,6 @@
 [package]
 name = "zerotrace-desktop"
-version = "1.0.6"
+version = "1.0.7"
 description = "ZeroTrace VPN - Windows PC Client with Wintun & Xray"
 authors = ["NovaLink LK"]
 edition = "2021"

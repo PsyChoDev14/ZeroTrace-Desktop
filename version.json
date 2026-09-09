@@ -1,18 +1,18 @@
 {
-  "version": "1.0.6",
-  "versionCode": 6,
+  "version": "1.0.7",
+  "versionCode": 7,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Custom dark cyber-themed Windows NSIS installer with ZeroTrace branded banners",
+    "Modern One-Click Instant Setup for Windows (like Discord, Telegram, and Chrome)",
+    "Frameless dark cyber installer theme with custom electric cyan progress bar",
+    "Auto-creates Desktop & Start Menu shortcuts and launches app immediately",
     "Fully automated silent in-place background updater on macOS (zero manual steps)",
-    "Bypass Windows SmartScreen Mark-of-the-Web via PowerShell unblock",
-    "Native Wintun Layer-3 virtual adapter integration (ZeroTrace TUN) for Windows",
-    "Ad-hoc bundle code signing on macOS preventing Gatekeeper verification errors"
+    "Bypass Windows SmartScreen Mark-of-the-Web via PowerShell unblock"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.6/ZeroTrace_1.0.6_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.7/ZeroTrace_1.0.7_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.6/ZeroTrace_1.0.6_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.7/ZeroTrace_1.0.7_aarch64.dmg"
   }
 }
