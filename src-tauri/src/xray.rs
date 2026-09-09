@@ -56,9 +56,10 @@ impl XrayConfigGenerator {
             }
         });
 
-        // 3. Inbounds (Local SOCKS5 & HTTP)
-        let inbounds = json!([
-            {
+        // 3. Inbounds (Local SOCKS5, HTTP, and Windows Wintun TUN)
+        #[allow(unused_mut)]
+        let mut inbounds = vec![
+            json!({
                 "tag": "socks-in",
                 "port": socks_port,
                 "listen": "127.0.0.1",
@@ -72,14 +73,33 @@ impl XrayConfigGenerator {
                     "routeOnly": true,
                     "destOverride": ["http", "tls", "quic"]
                 }
-            },
-            {
+            }),
+            json!({
                 "tag": "http-in",
                 "port": http_port,
                 "listen": "127.0.0.1",
                 "protocol": "http"
-            }
-        ]);
+            })
+        ];
+
+        #[cfg(windows)]
+        {
+            inbounds.push(json!({
+                "tag": "tun-in",
+                "protocol": "tun",
+                "settings": {
+                    "name": "ZeroTrace TUN",
+                    "mtu": 1500,
+                    "gateway": ["10.233.233.1/24"],
+                    "dns": [&settings.primary_dns, "1.1.1.1"],
+                    "autoSystemRoutingTable": ["0.0.0.0/0"]
+                },
+                "sniffing": {
+                    "enabled": true,
+                    "destOverride": ["http", "tls", "quic"]
+                }
+            }));
+        }
 
         // 4. Outbounds
         let mut outbounds = Vec::new();

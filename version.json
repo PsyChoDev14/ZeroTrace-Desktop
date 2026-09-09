@@ -1,0 +1,16 @@
+{
+  "version": "1.0.2",
+  "versionCode": 2,
+  "releaseDate": "2026-09-09",
+  "changelog": [
+    "Native Wintun Layer-3 virtual adapter integration (ZeroTrace TUN)",
+    "Automated Windows system proxy & route management",
+    "In-app one-click update engine"
+  ],
+  "windows": {
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.0_x64-setup.exe"
+  },
+  "macos": {
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.0_aarch64.dmg"
+  }
+}

@@ -9,8 +9,10 @@ import { LogsScreen } from './screens/LogsScreen';
 import { AddConfigModal } from './components/AddConfigModal';
 import { EditConfigModal } from './components/EditConfigModal';
 import { ShareModal } from './components/ShareModal';
+import { UpdateModal } from './components/UpdateModal';
 import { AppSettings, DiagnosticLog, ProxyConfig, TrafficStats, VpnState } from './types';
 import { api } from './utils/tauriBridge';
+import { checkForAppUpdate, AppUpdateInfo } from './utils/updater';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -46,6 +48,19 @@ export function App() {
   const [editingConfig, setEditingConfig] = useState<ProxyConfig | null>(null);
   const [sharingConfig, setSharingConfig] = useState<ProxyConfig | null>(null);
   const [isPingingAll, setIsPingingAll] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(null);
+
+  // Check for updates on startup (silent check after 2.5s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkForAppUpdate().then(res => {
+        if (res.hasUpdate && res.update) {
+          setAvailableUpdate(res.update);
+        }
+      });
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -261,6 +276,7 @@ export function App() {
             settings={settings}
             onSave={handleSaveSettings}
             onOpenLogs={handleOpenLogs}
+            onShowUpdateModal={info => setAvailableUpdate(info)}
           />
         )}
 
@@ -307,6 +323,12 @@ export function App() {
         config={sharingConfig}
         isOpen={sharingConfig !== null}
         onClose={() => setSharingConfig(null)}
+      />
+
+      <UpdateModal
+        isOpen={availableUpdate !== null}
+        updateInfo={availableUpdate}
+        onClose={() => setAvailableUpdate(null)}
       />
     </div>
   );

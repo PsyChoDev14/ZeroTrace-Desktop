@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Settings, Shield, Globe, Terminal, ChevronRight, Check } from 'lucide-react';
+import { Settings, Shield, Globe, Terminal, ChevronRight, Check, RefreshCw } from 'lucide-react';
 import { AppSettings, DpiBypassMode } from '../types';
+import { checkForAppUpdate, AppUpdateInfo, CURRENT_APP_VERSION } from '../utils/updater';
 
 interface SettingsScreenProps {
   settings: AppSettings;
   onSave: (updated: AppSettings) => void;
   onOpenLogs?: () => void;
+  onShowUpdateModal?: (info: AppUpdateInfo) => void;
 }
 
 /**
@@ -14,9 +16,32 @@ interface SettingsScreenProps {
  * - Streamlined pickers instead of giant vertical card walls
  * - Calm, spacious rhythm and clear visual hierarchy
  */
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSave, onOpenLogs }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({
+  settings,
+  onSave,
+  onOpenLogs,
+  onShowUpdateModal,
+}) => {
   const [current, setCurrent] = useState<AppSettings>(settings);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+
+  const handleManualCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateMsg(null);
+    try {
+      const res = await checkForAppUpdate();
+      if (res.hasUpdate && res.update) {
+        onShowUpdateModal?.(res.update);
+      } else {
+        setUpdateMsg(`You're on latest (v${CURRENT_APP_VERSION})`);
+        setTimeout(() => setUpdateMsg(null), 3500);
+      }
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   const dnsOptions = [
     { id: '94.140.14.14', name: 'AdGuard Ad-Blocker (Ad-Block)', tag: 'Recommended' },
@@ -204,7 +229,35 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSave
         </div>
       </div>
 
-      {/* Group 4: Diagnostics & Logs */}
+      {/* Group 4: Application & Updates */}
+      <div>
+        <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5 block">
+          Application
+        </span>
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-3 flex items-center justify-between text-xs">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-white">ZeroTrace Desktop</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                v{CURRENT_APP_VERSION}
+              </span>
+            </div>
+            <span className="text-[11px] text-white/40 mt-0.5">
+              {updateMsg || 'Built for Windows & macOS'}
+            </span>
+          </div>
+          <button
+            onClick={handleManualCheckUpdate}
+            disabled={isCheckingUpdate}
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer outline-none disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={isCheckingUpdate ? 'animate-spin' : ''} />
+            <span>{isCheckingUpdate ? 'Checking…' : 'Check for Updates'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Group 5: Diagnostics & Logs */}
       {onOpenLogs && (
         <div
           onClick={onOpenLogs}
