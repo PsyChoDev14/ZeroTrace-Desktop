@@ -1,17 +1,17 @@
 {
-  "version": "1.2.2",
-  "versionCode": 15,
+  "version": "1.2.3",
+  "versionCode": 16,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Fixed gigabit throughput: tun2socks now uses MTU 9000 jumbo frames (gVisor TCP window 6x larger)",
-    "Removed QUIC/UDP-443 block so browsers can use HTTP/3 for maximum download speeds",
-    "Removed SOCKS5 sniffing overhead — TUN mode routes by network type, no per-packet deep inspection",
-    "Added TCP Fast Open on proxy outbound for lower latency connection establishment"
+    "Gigabit Line-Rate Optimization: 64MB TCP send/receive buffers enabled on tun2socks netstack",
+    "Active TCP window auto-tuning enabled (-tcp-auto-tuning) to match high-bandwidth delay products",
+    "Windows kernel subinterface MTU 9000 applied to Wintun adapter for full jumbo frame throughput",
+    "Xray-core policy upgraded to bufferSize: -1 for unlimited zero-copy connection streaming"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.2/ZeroTrace_1.2.2_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.3/ZeroTrace_1.2.3_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.2/ZeroTrace_1.2.2_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.2.3/ZeroTrace_1.2.3_aarch64.dmg"
   }
 }

@@ -69,6 +69,9 @@ impl WindowsTunManager {
                 "-loglevel", "warning",
                 "-mtu", "9000",
                 "-udp-timeout", "60s",
+                "-tcp-auto-tuning",
+                "-tcp-rcvbuf", "64M",
+                "-tcp-sndbuf", "64M",
             ]);
             cmd.stdout(std::process::Stdio::null());
             cmd.stderr(std::process::Stdio::null());
@@ -128,6 +131,11 @@ impl WindowsTunManager {
                             "register=none",
                             "validate=no"
                         ])
+                        .output();
+
+                    // Configure MTU 9000 on Windows kernel subinterface for jumbo frame line-rate
+                    let _ = Command::new("netsh")
+                        .args(&["interface", "ipv4", "set", "subinterface", "wintun", "mtu=9000", "store=persistent"])
                         .output();
 
                     // If physical gateway and server IP are known, route server IP direct to gateway so Xray traffic doesn't loop

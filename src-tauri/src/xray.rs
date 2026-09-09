@@ -49,12 +49,13 @@ impl XrayConfigGenerator {
             "loglevel": "warning"
         });
 
-        // 2. High-Performance Core Policy (zero-copy native buffer pool, 300s idle timeout)
+        // 2. High-Performance Core Policy (unlimited connection buffer pool, 300s idle timeout)
         let policy = json!({
             "levels": {
                 "0": {
                     "handshake": 4,
-                    "connIdle": 300
+                    "connIdle": 300,
+                    "bufferSize": -1
                 }
             },
             "system": {
