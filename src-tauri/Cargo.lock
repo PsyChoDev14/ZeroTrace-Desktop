@@ -4733,7 +4733,7 @@ dependencies = [
 
 [[package]]
 name = "zerotrace-desktop"
-version = "1.0.9"
+version = "1.0.10"
 dependencies = [
  "base64 0.22.1",
  "chrono",

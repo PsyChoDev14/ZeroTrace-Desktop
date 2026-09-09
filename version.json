@@ -1,18 +1,18 @@
 {
-  "version": "1.0.9",
-  "versionCode": 9,
+  "version": "1.0.10",
+  "versionCode": 10,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Smooth real-time download progress bar with live percentage and stage indicators",
-    "Direct WhatsApp Support button in Settings (+94 78 838 5465)",
-    "macOS seamless app restart after update via detached process watcher",
-    "Windows SmartScreen Mark-of-the-Web bypass and silent currentUser setup",
-    "Standalone Portable Windows executable release"
+    "Fix Windows proxy tunnel connection and startup crash",
+    "Xray core verifyPeerCertByName support for bug-hosts and carrier SNI tweaks",
+    "1-Click Diagnostic Report exporter: capture real-time engine logs and send directly to WhatsApp support (+94 78 838 5465)",
+    "Sanitize deprecated allowInsecure flags in custom JSON configs",
+    "Real-time Xray core stdout/stderr event logging"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.9/ZeroTrace_1.0.9_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.10/ZeroTrace_1.0.10_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.9/ZeroTrace_1.0.9_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.10/ZeroTrace_1.0.10_aarch64.dmg"
   }
 }
