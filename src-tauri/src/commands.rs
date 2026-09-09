@@ -426,11 +426,18 @@ pub async fn download_and_install_update(url: String) -> Result<String, String> 
         let _ = std::fs::remove_dir_all(mount_point);
         let _ = std::fs::remove_file(&installer_path);
 
-        // 5. Relaunch new version of ZeroTrace and exit old process
-        println!("[Updater] Relaunching /Applications/ZeroTrace.app...");
-        let _ = std::process::Command::new("open").arg(target_app).spawn();
+        // 5. Relaunch new version of ZeroTrace after current process exits cleanly
+        println!("[Updater] Scheduling relaunch of /Applications/ZeroTrace.app...");
+        let my_pid = std::process::id();
+        let restart_cmd = format!(
+            "while kill -0 {} 2>/dev/null; do sleep 0.1; done; sleep 0.2; open -n '{}'",
+            my_pid, target_app
+        );
+        let _ = std::process::Command::new("sh")
+            .args(&["-c", &restart_cmd])
+            .spawn();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         std::process::exit(0);
     }
 

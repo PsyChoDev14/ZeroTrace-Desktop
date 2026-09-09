@@ -1,18 +1,17 @@
 {
-  "version": "1.0.7",
-  "versionCode": 7,
+  "version": "1.0.8",
+  "versionCode": 8,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Modern One-Click Instant Setup for Windows (like Discord, Telegram, and Chrome)",
-    "Frameless dark cyber installer theme with custom electric cyan progress bar",
-    "Auto-creates Desktop & Start Menu shortcuts and launches app immediately",
-    "Fully automated silent in-place background updater on macOS (zero manual steps)",
-    "Bypass Windows SmartScreen Mark-of-the-Web via PowerShell unblock"
+    "Fix macOS app auto-relaunch after update via detached PID watcher",
+    "Windows One-Click Instant Setup (installs into user directory without legacy wizard or UAC prompts)",
+    "Windows Standalone Portable Executable (zero-install portable edition)",
+    "Frameless dark cyber installer theme with electric cyan progress bar"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.7/ZeroTrace_1.0.7_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.8/ZeroTrace_1.0.8_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.7/ZeroTrace_1.0.7_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.0.8/ZeroTrace_1.0.8_aarch64.dmg"
   }
 }
