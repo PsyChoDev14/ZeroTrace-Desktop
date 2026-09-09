@@ -158,10 +158,22 @@ impl WindowsTunManager {
         self.is_active.load(Ordering::SeqCst)
     }
 
+    #[inline]
+    fn silent_command(program: &str) -> Command {
+        let mut cmd = Command::new(program);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        cmd
+    }
+
     pub fn cleanup_stale_proxies() {
         println!("[WindowsTunManager] Checking and cleaning stale Sing-box processes and proxy on startup...");
-        let _ = Command::new("taskkill").args(&["/F", "/IM", "sing-box.exe"]).output();
-        let _ = Command::new("taskkill").args(&["/F", "/IM", "tun2socks.exe"]).output();
+        let _ = Self::silent_command("taskkill").args(&["/F", "/IM", "sing-box.exe"]).output();
+        let _ = Self::silent_command("taskkill").args(&["/F", "/IM", "tun2socks.exe"]).output();
         let _ = Self::set_windows_proxy(false);
     }
 
@@ -255,15 +267,15 @@ impl WindowsTunManager {
         let proxy_server = "127.0.0.1:10808";
         let bypass = "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*;<local>";
 
-        let _ = Command::new("reg")
+        let _ = Self::silent_command("reg")
             .args(&["add", key, "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", proxy_val, "/f"])
             .output();
 
         if enable {
-            let _ = Command::new("reg")
+            let _ = Self::silent_command("reg")
                 .args(&["add", key, "/v", "ProxyServer", "/t", "REG_SZ", "/d", proxy_server, "/f"])
                 .output();
-            let _ = Command::new("reg")
+            let _ = Self::silent_command("reg")
                 .args(&["add", key, "/v", "ProxyOverride", "/t", "REG_SZ", "/d", bypass, "/f"])
                 .output();
         }

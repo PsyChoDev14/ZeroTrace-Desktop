@@ -1,17 +1,17 @@
 {
-  "version": "1.3.2",
-  "versionCode": 19,
+  "version": "1.3.3",
+  "versionCode": 20,
   "releaseDate": "2026-09-09",
   "changelog": [
-    "Fixed TLS certificate verification when using SNI tweaks / bug hosts (e.g. api.zoom.us)",
-    "Added insecure: true to outbound TLS to support carrier zero-rating SNI spoofing without certificate rejection",
-    "Added route.final: proxy to guarantee all non-bypassed traffic flows through the high-speed tunnel",
+    "Suppressed all console/PowerShell window flickering during connect, disconnect, and updates",
+    "Enabled CREATE_NO_WINDOW on Windows process executions (reg, taskkill, curl, powershell, cmd)",
+    "Clean, seamless background execution with 0ms visual popups",
     "Direct line-rate gigabit throughput up to 600–750+ Mbps on Windows Wintun"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.2/ZeroTrace_1.3.2_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.3/ZeroTrace_1.3.3_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.2/ZeroTrace_1.3.2_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.3/ZeroTrace_1.3.3_aarch64.dmg"
   }
 }

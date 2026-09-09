@@ -447,18 +447,26 @@ pub async fn download_and_install_update(
     let _ = std::fs::remove_file(&installer_path);
 
     // Download directly via system curl with -# (streaming progress meter)
-    let mut child = std::process::Command::new("curl")
-        .args(&[
-            "-#",
-            "-L",
-            "--retry", "3",
-            "--fail",
-            "-o",
-            installer_path.to_str().ok_or("Invalid temp path")?,
-            &url,
-        ])
-        .stderr(std::process::Stdio::piped())
-        .spawn()
+    let mut curl_cmd = std::process::Command::new("curl");
+    curl_cmd.args(&[
+        "-#",
+        "-L",
+        "--retry", "3",
+        "--fail",
+        "-o",
+        installer_path.to_str().ok_or("Invalid temp path")?,
+        &url,
+    ]);
+    curl_cmd.stderr(std::process::Stdio::piped());
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        curl_cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let mut child = curl_cmd.spawn()
         .map_err(|e| format!("Failed to spawn download: {}", e))?;
 
     if let Some(stderr) = child.stderr.take() {
@@ -505,14 +513,21 @@ pub async fn download_and_install_update(
         emit_progress(100.0, "installing", "Launching ZeroTrace installer...");
 
         // Strip any Mark-of-the-Web (Zone.Identifier) so Windows SmartScreen never blocks
-        let _ = std::process::Command::new("powershell")
-            .args(&[
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                &format!("Unblock-File -LiteralPath '{}'", installer_path.display()),
-            ])
-            .output();
+        let mut ps_cmd = std::process::Command::new("powershell");
+        ps_cmd.args(&[
+            "-WindowStyle", "Hidden",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            &format!("Unblock-File -LiteralPath '{}'", installer_path.display()),
+        ]);
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            ps_cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let _ = ps_cmd.output();
 
         // Spawn NSIS setup installer directly
         std::process::Command::new(&installer_path)
@@ -605,9 +620,12 @@ pub fn open_url(url: String) -> Result<(), String> {
     }
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(&["/c", "start", "", &url])
-            .spawn()
+        use std::os::windows::process::CommandExt;
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.args(&["/c", "start", "", &url]);
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        cmd.spawn()
             .map_err(|e| format!("Failed to open URL: {}", e))?;
     }
     #[cfg(target_os = "linux")]
@@ -635,9 +653,12 @@ pub fn export_diagnostic_report(state: State<SharedState>) -> String {
 
     #[cfg(target_os = "windows")]
     let proxy_verification = {
-        let out = std::process::Command::new("reg")
-            .args(&["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"])
-            .output()
+        use std::os::windows::process::CommandExt;
+        let mut cmd = std::process::Command::new("reg");
+        cmd.args(&["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"]);
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let out = cmd.output()
             .ok()
             .map(|o| {
                 let s = String::from_utf8_lossy(&o.stdout);
