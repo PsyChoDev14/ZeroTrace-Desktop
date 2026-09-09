@@ -64,6 +64,34 @@ jobs:
           unzip -q -o xray.zip xray.exe -d src-tauri/binaries/
           rm -f xray.zip
 
+      - name: Sync App Version from Tag
+        shell: bash
+        run: |
+          RAW_VER="${GITHUB_REF_NAME#v}"
+          if [ -z "$RAW_VER" ] || [ "$RAW_VER" = "main" ]; then
+            RAW_VER="${{ github.event.inputs.release_tag }}"
+            RAW_VER="${RAW_VER#v}"
+          fi
+          if [ -n "$RAW_VER" ] && [ "$RAW_VER" != "main" ]; then
+            echo "Synchronizing version $RAW_VER across package.json, tauri.conf.json, and Cargo.toml"
+            node -e "
+              const fs = require('fs');
+              const ver = '$RAW_VER';
+              
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.version = ver;
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+              
+              const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+              tauri.version = ver;
+              fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauri, null, 2));
+
+              let updater = fs.readFileSync('src/utils/updater.ts', 'utf8');
+              updater = updater.replace(/CURRENT_APP_VERSION = '.*'/, 'CURRENT_APP_VERSION = \'' + ver + '\'');
+              fs.writeFileSync('src/utils/updater.ts', updater);
+            "
+          fi
+
       - name: Build Tauri Windows
         run: npx tauri build
 
@@ -118,6 +146,33 @@ jobs:
           unzip -q -o xray.zip xray -d src-tauri/binaries/
           chmod +x src-tauri/binaries/xray
           rm -f xray.zip
+
+      - name: Sync App Version from Tag
+        run: |
+          RAW_VER="${GITHUB_REF_NAME#v}"
+          if [ -z "$RAW_VER" ] || [ "$RAW_VER" = "main" ]; then
+            RAW_VER="${{ github.event.inputs.release_tag }}"
+            RAW_VER="${RAW_VER#v}"
+          fi
+          if [ -n "$RAW_VER" ] && [ "$RAW_VER" != "main" ]; then
+            echo "Synchronizing version $RAW_VER across package.json, tauri.conf.json, and Cargo.toml"
+            node -e "
+              const fs = require('fs');
+              const ver = '$RAW_VER';
+              
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.version = ver;
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+              
+              const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+              tauri.version = ver;
+              fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauri, null, 2));
+
+              let updater = fs.readFileSync('src/utils/updater.ts', 'utf8');
+              updater = updater.replace(/CURRENT_APP_VERSION = '.*'/, 'CURRENT_APP_VERSION = \'' + ver + '\'');
+              fs.writeFileSync('src/utils/updater.ts', updater);
+            "
+          fi
 
       - name: Build Tauri macOS
         run: npx tauri build

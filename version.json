@@ -8,9 +8,9 @@
     "In-app one-click update engine"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.0_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.2_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.0_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/latest/download/ZeroTrace_1.0.2_aarch64.dmg"
   }
 }

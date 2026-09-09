@@ -229,30 +229,49 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       </div>
 
-      {/* Group 4: Application & Updates */}
+      {/* Group 4: About & Software Updates */}
       <div>
         <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5 block">
-          Application
+          About & Updates
         </span>
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-3 flex items-center justify-between text-xs">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-white">ZeroTrace Desktop</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                v{CURRENT_APP_VERSION}
-              </span>
+        <div className="rounded-2xl bg-white/5 border border-white/10 divide-y divide-white/5 overflow-hidden shadow-sm">
+          {/* Version Details Row */}
+          <div className="px-3.5 py-3 flex items-center justify-between text-xs">
+            <div className="flex flex-col">
+              <span className="font-semibold text-white/95">ZeroTrace Desktop</span>
+              <span className="text-[11px] text-white/40 mt-0.5">Cross-Platform Hybrid Engine</span>
             </div>
-            <span className="text-[11px] text-white/40 mt-0.5">
-              {updateMsg || 'Built for Windows & macOS'}
+            <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25">
+              v{CURRENT_APP_VERSION}
             </span>
           </div>
+
+          {/* Software Update Action Row */}
           <button
             onClick={handleManualCheckUpdate}
             disabled={isCheckingUpdate}
-            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer outline-none disabled:opacity-50"
+            className="w-full px-3.5 py-3 flex items-center justify-between text-xs hover:bg-white/5 active:bg-white/8 transition-all cursor-pointer outline-none group text-left disabled:opacity-60"
           >
-            <RefreshCw size={12} className={isCheckingUpdate ? 'animate-spin' : ''} />
-            <span>{isCheckingUpdate ? 'Checking…' : 'Check for Updates'}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+                <RefreshCw
+                  size={14}
+                  className={isCheckingUpdate ? 'animate-spin text-blue-400' : 'group-hover:rotate-180 transition-transform duration-500 text-blue-400'}
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-medium text-white/90 group-hover:text-white transition-colors">
+                  Software Update
+                </span>
+                <span className="text-[11px] text-white/40 mt-0.5">
+                  {updateMsg || 'Check for new releases & patches'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-white/30 group-hover:text-white/70 transition-colors">
+              {isCheckingUpdate && <span className="text-[11px] text-blue-400 font-medium">Checking…</span>}
+              <ChevronRight size={14} />
+            </div>
           </button>
         </div>
       </div>

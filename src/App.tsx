@@ -236,57 +236,59 @@ export function App() {
 
       {/* 2. Main Viewport */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        {currentTab === 'home' && (
-          <HomeScreen
-            vpnState={vpnState}
-            selectedConfig={selectedConfig}
-            trafficStats={trafficStats}
-            onToggleConnect={handleToggleConnect}
-            onOpenAddModal={() => setIsAddOpen(true)}
-            onNavigateToConfigs={() => setCurrentTab('servers')}
-            onPing={handlePing}
-          />
-        )}
+        <div key={currentTab} className="flex-1 flex flex-col overflow-hidden animate-screen-enter">
+          {currentTab === 'home' && (
+            <HomeScreen
+              vpnState={vpnState}
+              selectedConfig={selectedConfig}
+              trafficStats={trafficStats}
+              onToggleConnect={handleToggleConnect}
+              onOpenAddModal={() => setIsAddOpen(true)}
+              onNavigateToConfigs={() => setCurrentTab('servers')}
+              onPing={handlePing}
+            />
+          )}
 
-        {currentTab === 'servers' && (
-          <ConfigsScreen
-            configs={configs}
-            selectedId={selectedId}
-            onSelect={handleSelectConfig}
-            onPing={handlePing}
-            onPingAll={handlePingAll}
-            onOpenAddModal={() => setIsAddOpen(true)}
-            onEdit={cfg => setEditingConfig(cfg)}
-            onShare={cfg => setSharingConfig(cfg)}
-            onDelete={handleDelete}
-            isPingingAll={isPingingAll}
-          />
-        )}
+          {currentTab === 'servers' && (
+            <ConfigsScreen
+              configs={configs}
+              selectedId={selectedId}
+              onSelect={handleSelectConfig}
+              onPing={handlePing}
+              onPingAll={handlePingAll}
+              onOpenAddModal={() => setIsAddOpen(true)}
+              onEdit={cfg => setEditingConfig(cfg)}
+              onShare={cfg => setSharingConfig(cfg)}
+              onDelete={handleDelete}
+              isPingingAll={isPingingAll}
+            />
+          )}
 
-        {currentTab === 'statistics' && (
-          <StatisticsScreen
-            vpnState={vpnState}
-            selectedConfig={selectedConfig}
-            trafficStats={trafficStats}
-          />
-        )}
+          {currentTab === 'statistics' && (
+            <StatisticsScreen
+              vpnState={vpnState}
+              selectedConfig={selectedConfig}
+              trafficStats={trafficStats}
+            />
+          )}
 
-        {currentTab === 'settings' && (
-          <SettingsScreen
-            settings={settings}
-            onSave={handleSaveSettings}
-            onOpenLogs={handleOpenLogs}
-            onShowUpdateModal={info => setAvailableUpdate(info)}
-          />
-        )}
+          {currentTab === 'settings' && (
+            <SettingsScreen
+              settings={settings}
+              onSave={handleSaveSettings}
+              onOpenLogs={handleOpenLogs}
+              onShowUpdateModal={info => setAvailableUpdate(info)}
+            />
+          )}
 
-        {currentTab === 'logs' && (
-          <LogsScreen
-            logs={logs}
-            onClear={handleClearLogs}
-            onBack={() => setCurrentTab(previousTab)}
-          />
-        )}
+          {currentTab === 'logs' && (
+            <LogsScreen
+              logs={logs}
+              onClear={handleClearLogs}
+              onBack={() => setCurrentTab(previousTab)}
+            />
+          )}
+        </div>
       </main>
 
       {/* 3. Floating iOS Liquid Glass Bottom Navigation Island */}

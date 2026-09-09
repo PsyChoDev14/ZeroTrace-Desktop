@@ -11,7 +11,7 @@ export interface AppUpdateInfo {
   };
 }
 
-export const CURRENT_APP_VERSION = '1.0.0';
+export const CURRENT_APP_VERSION = '1.0.2';
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/PsyChoDev14/ZeroTrace-Desktop/main/version.json';
 
