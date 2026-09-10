@@ -1,18 +1,18 @@
 {
-  "version": "1.3.4",
-  "versionCode": 21,
-  "releaseDate": "2026-09-09",
+  "version": "1.3.5",
+  "versionCode": 22,
+  "releaseDate": "2026-09-10",
   "changelog": [
-    "Real-time live throughput engine on Windows (Wintun GetIfTable2) & macOS (AF_LINK getifaddrs)",
-    "Fixed utility window geometry (380x660) with maximize button removed",
-    "System Tray / Menu Bar integration: minimizing hides to notification tray area",
-    "Light Mode & System Theme support with Apple Human Interface Guidelines palette",
-    "Instant, optimistic VPN disconnect with 0ms transition delay"
+    "Kill Switch now detects a crashed tunnel and blocks traffic instead of silently falling back to a direct, unprotected connection",
+    "Fixed manual \"Check for Updates\" showing a fake update when you were already on the latest version",
+    "Server sharing and importing now use real, scannable QR codes instead of a placeholder icon",
+    "Fixed pasted custom JSON configs showing a placeholder server address instead of the real one",
+    "UI and theme refinements across Settings, Update, and the connection screen"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.4/ZeroTrace_1.3.4_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.5/ZeroTrace_1.3.5_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.4/ZeroTrace_1.3.4_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.5/ZeroTrace_1.3.5_aarch64.dmg"
   }
 }

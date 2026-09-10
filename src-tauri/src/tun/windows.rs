@@ -158,6 +158,17 @@ impl WindowsTunManager {
         self.is_active.load(Ordering::SeqCst)
     }
 
+    /// Returns true only if the sing-box child process is still actually
+    /// running. Distinct from `is_active()`, which reflects whether the
+    /// system proxy configuration is still applied (used by the Kill Switch
+    /// to detect a tunnel crash even while `is_active()` stays true).
+    pub fn is_process_alive(&mut self) -> bool {
+        match self.singbox_child.as_mut() {
+            Some(child) => matches!(child.try_wait(), Ok(None)),
+            None => false,
+        }
+    }
+
     #[inline]
     fn silent_command(program: &str) -> Command {
         let mut cmd = Command::new(program);

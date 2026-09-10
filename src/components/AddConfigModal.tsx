@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import jsQR from 'jsqr';
+import { X, Clipboard, ArrowRight, AlertCircle, ScanLine } from 'lucide-react';
 import { ProxyConfig } from '../types';
 import { api } from '../utils/tauriBridge';
 
@@ -10,11 +11,38 @@ interface AddConfigModalProps {
 }
 
 export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose, onAdded }) => {
+  const [mounted, setMounted] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const [rawText, setRawText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setIsClosing(false);
+      }, 180);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, mounted]);
+
+  // ESC key dismissal
+  useEffect(() => {
+    if (!mounted || isClosing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mounted, isClosing, onClose]);
+
+  if (!mounted) return null;
 
   const handlePaste = async () => {
     try {
@@ -23,6 +51,53 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
       setError(null);
     } catch {
       setError('Could not read from clipboard');
+    }
+  };
+
+  const handleScanQrImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleQrFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so selecting the same file again still fires onChange
+    if (!file) return;
+
+    setError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Could not load image'));
+        image.src = dataUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const canvasCtx = canvas.getContext('2d');
+      if (!canvasCtx) {
+        setError('Could not process the image on this device.');
+        return;
+      }
+      canvasCtx.drawImage(img, 0, 0);
+      const imageData = canvasCtx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+      if (code && code.data) {
+        setRawText(code.data);
+      } else {
+        setError('No QR code found in that image. Try a clearer screenshot or photo.');
+      }
+    } catch {
+      setError('Could not read the selected image.');
     }
   };
 
@@ -53,8 +128,18 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg rounded-3xl bg-zt-surface border border-zt-border p-6 shadow-2xl">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md cursor-pointer ${
+        isClosing ? 'animate-backdrop-exit' : 'animate-backdrop-enter'
+      }`}
+      onClick={onClose}
+    >
+      <div
+        className={`relative w-full max-w-lg rounded-3xl bg-zt-surface border border-zt-border p-6 shadow-2xl cursor-default ${
+          isClosing ? 'animate-modal-exit' : 'animate-modal-enter'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zt-border">
           <div>
@@ -75,13 +160,29 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
         <div className="my-5">
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-zt-text-muted">Configuration Link or JSON</label>
-            <button
-              onClick={handlePaste}
-              className="flex items-center gap-1 text-xs text-zt-accent hover:underline"
-            >
-              <Clipboard size={12} />
-              <span>Paste from Clipboard</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleScanQrImage}
+                className="flex items-center gap-1 text-xs text-zt-accent hover:underline"
+              >
+                <ScanLine size={12} />
+                <span>Scan QR Image</span>
+              </button>
+              <button
+                onClick={handlePaste}
+                className="flex items-center gap-1 text-xs text-zt-accent hover:underline"
+              >
+                <Clipboard size={12} />
+                <span>Paste from Clipboard</span>
+              </button>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleQrFileSelected}
+              className="hidden"
+            />
           </div>
 
           <textarea

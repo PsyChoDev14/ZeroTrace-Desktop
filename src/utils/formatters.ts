@@ -5,7 +5,10 @@ export function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec >= 1024) {
     return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
   }
-  return `${Math.round(bytesPerSec)} B/s`;
+  if (bytesPerSec > 0) {
+    return `${Math.round(bytesPerSec)} B/s`;
+  }
+  return '0 KB/s';
 }
 
 export function formatBytes(bytes: number): string {

@@ -7,26 +7,42 @@ interface ConnectionDialProps {
   hasConfig: boolean;
   onClick: () => void;
   disabled?: boolean;
+  isLightMode?: boolean;
 }
 
 /**
- * ZeroTrace Obsidian Cyber Dial
+ * ZeroTrace Obsidian & Pearl Cyber Dial
  * Uses SVG-native animateTransform for rotation — bypasses WebKit CSS transform issues on SVG groups.
  * - Connecting: rotating laser comet arc with glowing photon head
  * - Connected: slow ambient aurora sweep
  * - Idle: breathing halo only
+ * - Light Mode: Apple HIG frosted pearl dial with crisp contrast
  */
 const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
   state,
   hasConfig,
   onClick,
   disabled = false,
+  isLightMode,
 }) => {
   const isConnected = state.status === 'connected';
   const isConnecting = state.status === 'connecting' || state.status === 'stopping';
   const isError = state.status === 'error';
 
-  const coreBg = isConnected
+  const isLight = isLightMode ?? (typeof document !== 'undefined' && (
+    document.documentElement.classList.contains('theme-light') ||
+    Boolean(document.querySelector('.theme-light'))
+  ));
+
+  const coreBg = isLight
+    ? isConnected
+      ? 'radial-gradient(circle at 50% 25%, #FFFFFF 0%, #ECFDF5 50%, #D1FAE5 100%)'
+      : isConnecting
+      ? 'radial-gradient(circle at 50% 25%, #FFFFFF 0%, #EEF2FF 50%, #E0E7FF 100%)'
+      : isError
+      ? 'radial-gradient(circle at 50% 25%, #FFFFFF 0%, #FEF2F2 50%, #FEE2E2 100%)'
+      : 'radial-gradient(circle at 50% 25%, #FFFFFF 0%, #F8FAFC 55%, #EDF2F7 100%)'
+    : isConnected
     ? 'radial-gradient(circle at 50% 30%, #0F3324 0%, #081C14 55%, #030A07 100%)'
     : isConnecting
     ? 'radial-gradient(circle at 50% 30%, #172347 0%, #0C1329 55%, #050812 100%)'
@@ -34,7 +50,15 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
     ? 'radial-gradient(circle at 50% 30%, #381512 0%, #1E0A08 55%, #0D0403 100%)'
     : 'radial-gradient(circle at 50% 30%, #1A1E2B 0%, #11141E 55%, #090B10 100%)';
 
-  const borderColor = isConnected
+  const borderColor = isLight
+    ? isConnected
+      ? 'rgba(16, 185, 129, 0.7)'
+      : isConnecting
+      ? 'rgba(79, 70, 229, 0.7)'
+      : isError
+      ? 'rgba(239, 68, 68, 0.7)'
+      : 'rgba(203, 213, 225, 0.85)'
+    : isConnected
     ? 'rgba(53, 199, 123, 0.9)'
     : isConnecting
     ? 'rgba(84, 104, 255, 0.9)'
@@ -42,7 +66,15 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
     ? 'rgba(240, 83, 61, 0.9)'
     : 'rgba(255, 255, 255, 0.12)';
 
-  const haloBg = isConnected
+  const haloBg = isLight
+    ? isConnected
+      ? 'rgba(16, 185, 129, 0.22)'
+      : isConnecting
+      ? 'rgba(79, 70, 229, 0.22)'
+      : isError
+      ? 'rgba(239, 68, 68, 0.22)'
+      : 'rgba(99, 102, 241, 0.05)'
+    : isConnected
     ? 'rgba(53, 199, 123, 0.35)'
     : isConnecting
     ? 'rgba(84, 104, 255, 0.38)'
@@ -50,7 +82,15 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
     ? 'rgba(240, 83, 61, 0.35)'
     : 'rgba(0, 0, 0, 0.4)';
 
-  const boxShadow = isConnected
+  const boxShadow = isLight
+    ? isConnected
+      ? '0 8px 32px rgba(16, 185, 129, 0.25), 0 2px 8px rgba(16, 185, 129, 0.1), inset 0 2px 0 #FFFFFF'
+      : isConnecting
+      ? '0 8px 32px rgba(79, 70, 229, 0.25), 0 2px 8px rgba(79, 70, 229, 0.1), inset 0 2px 0 #FFFFFF'
+      : isError
+      ? '0 8px 32px rgba(239, 68, 68, 0.25), 0 2px 8px rgba(239, 68, 68, 0.1), inset 0 2px 0 #FFFFFF'
+      : '0 12px 28px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 2px 0 #FFFFFF'
+    : isConnected
     ? '0 0 35px rgba(53, 199, 123, 0.35), inset 0 0 24px rgba(53, 199, 123, 0.22), inset 0 1.5px 0 rgba(255,255,255,0.35)'
     : isConnecting
     ? '0 0 35px rgba(84, 104, 255, 0.38), inset 0 0 24px rgba(84, 104, 255, 0.25), inset 0 1.5px 0 rgba(255,255,255,0.35)'
@@ -191,19 +231,31 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
             <AlertTriangle
               size={42}
               fill="none"
-              className="text-zt-danger drop-shadow-[0_0_12px_rgba(240,83,61,0.7)]"
+              className={
+                isLight
+                  ? 'text-red-600 drop-shadow-[0_0_12px_rgba(239,68,68,0.5)]'
+                  : 'text-zt-danger drop-shadow-[0_0_12px_rgba(240,83,61,0.7)]'
+              }
             />
           ) : isConnected ? (
             <Shield
               size={44}
               fill="none"
-              className="text-emerald-400 drop-shadow-[0_0_18px_rgba(52,211,153,0.9)] transition-all duration-300"
+              className={
+                isLight
+                  ? 'text-emerald-600 drop-shadow-[0_0_14px_rgba(16,185,129,0.5)] transition-all duration-300'
+                  : 'text-emerald-400 drop-shadow-[0_0_18px_rgba(52,211,153,0.9)] transition-all duration-300'
+              }
             />
           ) : isConnecting ? (
             <Lock
               size={40}
               fill="none"
-              className="text-blue-400 drop-shadow-[0_0_18px_rgba(96,165,250,0.9)] animate-pulse transition-all"
+              className={
+                isLight
+                  ? 'text-indigo-600 drop-shadow-[0_0_14px_rgba(79,70,229,0.5)] animate-pulse transition-all'
+                  : 'text-blue-400 drop-shadow-[0_0_18px_rgba(96,165,250,0.9)] animate-pulse transition-all'
+              }
             />
           ) : (
             <Power
@@ -211,7 +263,11 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
               fill="none"
               className={`transition-all duration-300 ${
                 hasConfig
-                  ? 'text-white/70 group-hover:text-white group-hover:drop-shadow-[0_0_14px_rgba(255,255,255,0.7)]'
+                  ? isLight
+                    ? 'text-slate-600 group-hover:text-indigo-600 group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.4)]'
+                    : 'text-white/70 group-hover:text-white group-hover:drop-shadow-[0_0_14px_rgba(255,255,255,0.7)]'
+                  : isLight
+                  ? 'text-slate-300'
                   : 'text-white/30'
               }`}
             />

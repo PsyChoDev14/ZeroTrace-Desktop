@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Server } from 'lucide-react';
 import { ProxyConfig } from '../types';
 import { api } from '../utils/tauriBridge';
@@ -11,16 +11,56 @@ interface EditConfigModalProps {
 }
 
 export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen, onClose, onSaved }) => {
-  if (!isOpen || !config) return null;
+  const [mounted, setMounted] = useState(isOpen && !!config);
+  const [isClosing, setIsClosing] = useState(false);
 
-  const [name, setName] = useState(config.name);
-  const [server, setServer] = useState(config.server);
-  const [port, setPort] = useState(config.port.toString());
-  const [uuid, setUuid] = useState(config.uuid || '');
-  const [sni, setSni] = useState(config.sni || '');
-  const [path, setPath] = useState(config.path || '');
-  const [publicKey, setPublicKey] = useState(config.publicKey || '');
-  const [shortId, setShortId] = useState(config.shortId || '');
+  const [name, setName] = useState(config?.name || '');
+  const [server, setServer] = useState(config?.server || '');
+  const [port, setPort] = useState(config?.port?.toString() || '');
+  const [uuid, setUuid] = useState(config?.uuid || '');
+  const [sni, setSni] = useState(config?.sni || '');
+  const [path, setPath] = useState(config?.path || '');
+  const [publicKey, setPublicKey] = useState(config?.publicKey || '');
+  const [shortId, setShortId] = useState(config?.shortId || '');
+
+  useEffect(() => {
+    if (config) {
+      setName(config.name);
+      setServer(config.server);
+      setPort(config.port.toString());
+      setUuid(config.uuid || '');
+      setSni(config.sni || '');
+      setPath(config.path || '');
+      setPublicKey(config.publicKey || '');
+      setShortId(config.shortId || '');
+    }
+  }, [config]);
+
+  useEffect(() => {
+    if (isOpen && config) {
+      setMounted(true);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setIsClosing(false);
+      }, 180);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, config, mounted]);
+
+  // ESC key dismissal
+  useEffect(() => {
+    if (!mounted || isClosing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mounted, isClosing, onClose]);
+
+  if (!mounted || !config) return null;
 
   const handleSave = async () => {
     const updated: ProxyConfig = {
@@ -41,8 +81,18 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-3xl bg-zt-surface border border-zt-border p-6 shadow-2xl">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md cursor-pointer ${
+        isClosing ? 'animate-backdrop-exit' : 'animate-backdrop-enter'
+      }`}
+      onClick={onClose}
+    >
+      <div
+        className={`relative w-full max-w-md rounded-3xl bg-zt-surface border border-zt-border p-6 shadow-2xl cursor-default ${
+          isClosing ? 'animate-modal-exit' : 'animate-modal-enter'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between pb-4 border-b border-zt-border">
           <div className="flex items-center gap-2">
             <Server size={18} className="text-zt-accent" />

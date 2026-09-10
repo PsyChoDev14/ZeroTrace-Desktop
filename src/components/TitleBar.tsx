@@ -42,7 +42,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
 
   if (isMac) {
     return (
-      <header className="h-10 w-full relative flex items-center justify-between px-3.5 bg-zt-bg/90 backdrop-blur-md border-b border-white/5 z-50 select-none cursor-default shrink-0">
+      <header className="h-10 w-full relative flex items-center justify-between px-3.5 bg-zt-bg/90 backdrop-blur-md border-b border-zt-border z-50 select-none cursor-default shrink-0">
         {/* Full-width Drag Region Background (z-0) */}
         <div data-tauri-drag-region className="absolute inset-0 z-0" />
 
@@ -92,7 +92,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
             className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
               isConnected
                 ? 'bg-zt-success shadow-[0_0_8px_#35C77B]'
-                : 'bg-white/20'
+                : 'bg-zt-text-faint/30'
             }`}
             title={isConnected ? 'Connected & Protected' : 'Disconnected'}
           />
@@ -110,7 +110,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
                 onOpenLogs();
               }}
               onMouseDown={e => e.stopPropagation()}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-white/40 hover:text-blue-400 hover:bg-white/5 transition-colors cursor-pointer outline-none focus:outline-none"
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-zt-text-muted hover:text-zt-accent hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
               title="Diagnostics & Logs"
             >
               <Terminal size={12} />
@@ -123,7 +123,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
 
   // Windows / Linux TitleBar layout
   return (
-    <header className="h-10 w-full relative flex items-center justify-between px-3 bg-zt-bg/90 backdrop-blur-md border-b border-white/5 z-50 select-none cursor-default shrink-0">
+    <header className="h-10 w-full relative flex items-center justify-between px-3 bg-zt-bg/90 backdrop-blur-md border-b border-zt-border z-50 select-none cursor-default shrink-0">
       {/* Drag Region Background */}
       <div data-tauri-drag-region className="absolute inset-0 z-0" />
 
@@ -137,7 +137,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
           className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
             isConnected
               ? 'bg-zt-success shadow-[0_0_8px_#35C77B]'
-              : 'bg-white/20'
+              : 'bg-zt-text-faint/30'
           }`}
           title={isConnected ? 'Connected & Protected' : 'Disconnected'}
         />
@@ -155,20 +155,20 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
               onOpenLogs();
             }}
             onMouseDown={e => e.stopPropagation()}
-            className="w-6 h-6 flex items-center justify-center rounded-lg text-white/40 hover:text-blue-400 hover:bg-white/5 transition-colors cursor-pointer outline-none focus:outline-none"
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-zt-text-muted hover:text-zt-accent hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
             title="Diagnostics & Logs"
           >
             <Terminal size={12} />
           </button>
         )}
-        <div className="w-px h-3 bg-white/10 mx-0.5" />
+        <div className="w-px h-3 bg-zt-border mx-0.5" />
         <button
           onClick={e => {
             e.stopPropagation();
             handleMinimize();
           }}
           onMouseDown={e => e.stopPropagation()}
-          className="w-6 h-6 flex items-center justify-center rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors cursor-pointer outline-none focus:outline-none"
+          className="w-6 h-6 flex items-center justify-center rounded text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
           title="Minimize"
         >
           <Minus size={12} />
@@ -179,7 +179,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
             handleClose();
           }}
           onMouseDown={e => e.stopPropagation()}
-          className="w-6 h-6 flex items-center justify-center rounded text-white/50 hover:text-white hover:bg-red-500 transition-colors cursor-pointer outline-none focus:outline-none"
+          className="w-6 h-6 flex items-center justify-center rounded text-zt-text-muted hover:text-white hover:bg-red-500 transition-colors cursor-pointer outline-none focus:outline-none"
           title="Close"
         >
           <X size={12} />

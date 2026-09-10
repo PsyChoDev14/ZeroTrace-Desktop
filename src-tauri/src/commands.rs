@@ -41,9 +41,73 @@ impl AppContext {
 
 pub type SharedState = Arc<Mutex<AppContext>>;
 
+// Reports whether the platform tunnel process (sing-box on Windows, Xray on
+// macOS) is still alive. Used by `get_state` to detect an unexpected crash
+// instead of continuing to report a stale "connected" status.
+#[cfg(windows)]
+fn tunnel_process_alive(ctx: &mut AppContext) -> bool {
+    ctx.tun_manager.is_process_alive()
+}
+
+#[cfg(not(windows))]
+fn tunnel_process_alive(ctx: &mut AppContext) -> bool {
+    ctx.xray_process.is_running()
+}
+
 #[tauri::command]
 pub fn get_state(state: State<SharedState>) -> VpnState {
-    state.lock().vpn_state.clone()
+    let mut ctx = state.lock();
+
+    // Kill Switch enforcement: every poll, verify the tunnel process that is
+    // supposed to be carrying traffic is actually still running. Without
+    // this check an unexpected crash of sing-box/Xray would leave the UI
+    // reporting "Protected Tunnel Active" indefinitely while traffic quietly
+    // falls back to a direct, unprotected connection.
+    if ctx.vpn_state.status == "connected" && !tunnel_process_alive(&mut *ctx) {
+        if ctx.settings.kill_switch {
+            // Kill Switch ON: deliberately do NOT tear down the system
+            // proxy / routing configuration here. Leaving it pointed at the
+            // now-dead local tunnel means proxy-aware traffic fails closed
+            // (connection refused) instead of silently leaking direct.
+            // The user must explicitly reconnect or disconnect to clear it.
+            ctx.add_log(
+                "ERROR",
+                "KillSwitch",
+                "Tunnel process terminated unexpectedly. Kill Switch engaged: network access stays blocked until you reconnect.",
+            );
+            ctx.vpn_state = VpnState {
+                status: "error".to_string(),
+                server_name: ctx.vpn_state.server_name.clone(),
+                server_address: ctx.vpn_state.server_address.clone(),
+                connected_at: None,
+                error_message: Some(
+                    "Kill Switch engaged - the tunnel was lost and network traffic is being blocked. Reconnect to restore internet access.".to_string(),
+                ),
+            };
+        } else {
+            // Kill Switch OFF: fail open, restore direct connectivity immediately.
+            ctx.add_log(
+                "WARN",
+                "ZeroTrace",
+                "Tunnel process terminated unexpectedly. Kill Switch is off; restoring direct connectivity.",
+            );
+            ctx.tun_manager.stop_tunnel();
+            ctx.xray_process.stop();
+            ctx.vpn_state = VpnState {
+                status: "disconnected".to_string(),
+                server_name: None,
+                server_address: None,
+                connected_at: None,
+                error_message: Some("Tunnel process terminated unexpectedly.".to_string()),
+            };
+            ctx.traffic_stats.download_speed = 0;
+            ctx.traffic_stats.upload_speed = 0;
+            ctx.last_stats_poll = None;
+            ctx.last_octets = None;
+        }
+    }
+
+    ctx.vpn_state.clone()
 }
 
 pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result<bool, String> {
@@ -446,16 +510,19 @@ pub fn get_traffic_stats(state: State<SharedState>) -> TrafficStats {
         if let Some((curr_in, curr_out)) = get_live_interface_octets() {
             if let (Some(last_poll), Some((last_in, last_out))) = (ctx.last_stats_poll, ctx.last_octets) {
                 let delta_ms = (now - last_poll).max(1);
-                let delta_in = curr_in.saturating_sub(last_in);
-                let delta_out = curr_out.saturating_sub(last_out);
+                let delta_in = ((curr_in as u32).wrapping_sub(last_in as u32)) as u64;
+                let delta_out = ((curr_out as u32).wrapping_sub(last_out as u32)) as u64;
 
-                let down_speed = (delta_in * 1000) / (delta_ms as u64);
-                let up_speed = (delta_out * 1000) / (delta_ms as u64);
+                // Cap single-second delta at 1.5 GB/s to discard counter reset anomalies
+                if delta_in < 1_500_000_000 && delta_out < 1_500_000_000 {
+                    let down_speed = (delta_in * 1000) / (delta_ms as u64);
+                    let up_speed = (delta_out * 1000) / (delta_ms as u64);
 
-                ctx.traffic_stats.download_speed = down_speed;
-                ctx.traffic_stats.upload_speed = up_speed;
-                ctx.traffic_stats.total_downloaded += delta_in;
-                ctx.traffic_stats.total_uploaded += delta_out;
+                    ctx.traffic_stats.download_speed = down_speed;
+                    ctx.traffic_stats.upload_speed = up_speed;
+                    ctx.traffic_stats.total_downloaded += delta_in;
+                    ctx.traffic_stats.total_uploaded += delta_out;
+                }
             }
             ctx.last_octets = Some((curr_in, curr_out));
         } else {
@@ -807,5 +874,6 @@ pub fn export_diagnostic_report(state: State<SharedState>) -> String {
         logs_text
     )
 }
+
 
 

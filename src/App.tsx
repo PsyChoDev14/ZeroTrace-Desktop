@@ -281,7 +281,7 @@ export function App() {
   }, []);
 
   return (
-    <div className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans ${isLightMode ? 'theme-light' : ''}`}>
+    <div className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans theme-animated ${isLightMode ? 'theme-light' : ''}`}>
       {/* 1. Frameless Window Titlebar */}
       <TitleBar
         isConnected={vpnState.status === 'connected'}
@@ -300,6 +300,7 @@ export function App() {
               onOpenAddModal={() => setIsAddOpen(true)}
               onNavigateToConfigs={() => setCurrentTab('servers')}
               onPing={handlePing}
+              isLightMode={isLightMode}
             />
           )}
 

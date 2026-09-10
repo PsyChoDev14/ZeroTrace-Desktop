@@ -329,13 +329,15 @@ impl ConfigParser {
             _ => ProxyProtocol::CustomJson,
         };
 
+        let (server, port, uuid) = Self::extract_endpoint_from_outbound(first_outbound);
+
         Some(ProxyConfig {
             id: Uuid::new_v4().to_string(),
             name: tag.to_string(),
             protocol,
-            server: "Custom Endpoint".to_string(),
-            port: 443,
-            uuid: "".to_string(),
+            server,
+            port,
+            uuid,
             security: "none".to_string(),
             network: "tcp".to_string(),
             sni: "".to_string(),
@@ -351,6 +353,65 @@ impl ConfigParser {
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
         })
+    }
+
+    /// Best-effort extraction of the real (server, port, secret) from a pasted
+    /// custom outbound so the Configs list and ping features show something
+    /// meaningful instead of a hardcoded "Custom Endpoint" placeholder.
+    /// Supports both Xray-style outbounds (`settings.vnext`/`settings.servers`)
+    /// and sing-box-style outbounds (top-level `server`/`server_port`).
+    fn extract_endpoint_from_outbound(ob: &Value) -> (String, u16, String) {
+        // Xray-style VLESS/VMess: settings.vnext[0]
+        if let Some(entry) = ob
+            .get("settings")
+            .and_then(|s| s.get("vnext"))
+            .and_then(|v| v.as_array())
+            .and_then(|a| a.first())
+        {
+            let addr = entry.get("address").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            if !addr.is_empty() {
+                let port = entry.get("port").and_then(|v| v.as_u64()).unwrap_or(443) as u16;
+                let secret = entry
+                    .get("users")
+                    .and_then(|u| u.as_array())
+                    .and_then(|a| a.first())
+                    .and_then(|u| u.get("id"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                return (addr, port, secret);
+            }
+        }
+
+        // Xray-style Trojan/Shadowsocks: settings.servers[0]
+        if let Some(entry) = ob
+            .get("settings")
+            .and_then(|s| s.get("servers"))
+            .and_then(|v| v.as_array())
+            .and_then(|a| a.first())
+        {
+            let addr = entry.get("address").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            if !addr.is_empty() {
+                let port = entry.get("port").and_then(|v| v.as_u64()).unwrap_or(443) as u16;
+                let secret = entry.get("password").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                return (addr, port, secret);
+            }
+        }
+
+        // sing-box-style outbound: top-level server / server_port / uuid|password
+        let addr = ob.get("server").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        if !addr.is_empty() {
+            let port = ob.get("server_port").and_then(|v| v.as_u64()).unwrap_or(443) as u16;
+            let secret = ob
+                .get("uuid")
+                .and_then(|v| v.as_str())
+                .or_else(|| ob.get("password").and_then(|v| v.as_str()))
+                .unwrap_or("")
+                .to_string();
+            return (addr, port, secret);
+        }
+
+        ("Custom Endpoint".to_string(), 443, "".to_string())
     }
 }
 

@@ -12,6 +12,7 @@ interface HomeScreenProps {
   onOpenAddModal: () => void;
   onNavigateToConfigs: () => void;
   onPing: (id: string) => void;
+  isLightMode?: boolean;
 }
 
 /**
@@ -27,9 +28,11 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
   onToggleConnect,
   onOpenAddModal,
   onNavigateToConfigs,
+  isLightMode,
 }) => {
   const isConnected = vpnState.status === 'connected';
   const isConnecting = vpnState.status === 'connecting' || vpnState.status === 'stopping';
+  const isError = vpnState.status === 'error';
   const pingInfo = selectedConfig ? formatPing(selectedConfig.pingMs) : null;
 
   return (
@@ -39,13 +42,14 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
         state={vpnState}
         hasConfig={selectedConfig !== null}
         onClick={onToggleConnect}
+        isLightMode={isLightMode}
       />
 
       {/* 2. Dynamic Status Headline & Subtitle */}
       <div className="mt-3 flex flex-col items-center text-center">
         {isConnected ? (
           <>
-            <div className="text-3xl font-mono font-bold tracking-tight text-white drop-shadow-sm">
+            <div className="text-3xl font-mono font-bold tracking-tight text-zt-text drop-shadow-sm">
               {formatDuration(trafficStats.uptimeSeconds)}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-zt-success font-medium mt-1">
@@ -58,16 +62,25 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
             <div className="text-base font-semibold text-zt-accent tracking-tight animate-pulse">
               Securing Tunnel…
             </div>
-            <span className="text-xs text-white/50 mt-0.5">
+            <span className="text-xs text-zt-text-muted mt-0.5">
               Connecting to {selectedConfig?.name || 'server'}
+            </span>
+          </>
+        ) : isError ? (
+          <>
+            <div className="text-base font-semibold text-zt-danger tracking-tight">
+              Connection Lost
+            </div>
+            <span className="text-xs text-zt-text-muted mt-0.5 max-w-[260px] text-center">
+              {vpnState.errorMessage || 'The tunnel disconnected unexpectedly.'}
             </span>
           </>
         ) : (
           <>
-            <div className="text-base font-semibold text-white tracking-tight">
+            <div className="text-base font-semibold text-zt-text tracking-tight">
               {selectedConfig ? 'Ready to Connect' : 'No Server Selected'}
             </div>
-            <span className="text-xs text-white/40 mt-0.5">
+            <span className="text-xs text-zt-text-faint mt-0.5">
               {selectedConfig
                 ? 'Tap dial to route traffic through ZeroTrace'
                 : 'Add a server node to begin'}
@@ -78,13 +91,13 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
 
       {/* 3. Live Throughput Inline Pill (Only when connected) */}
       {isConnected && (
-        <div className="flex items-center gap-4 mt-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono">
-          <div className="flex items-center gap-1.5 text-emerald-400">
+        <div className="flex items-center gap-4 mt-3 px-4 py-1.5 rounded-full bg-zt-surface border border-zt-border text-xs font-mono shadow-sm">
+          <div className="flex items-center gap-1.5 text-emerald-500">
             <ArrowDown size={13} />
             <span>{formatSpeed(trafficStats.downloadSpeed)}</span>
           </div>
-          <div className="w-px h-3 bg-white/15" />
-          <div className="flex items-center gap-1.5 text-blue-400">
+          <div className="w-px h-3 bg-zt-border" />
+          <div className="flex items-center gap-1.5 text-zt-accent">
             <ArrowUp size={13} />
             <span>{formatSpeed(trafficStats.uploadSpeed)}</span>
           </div>
@@ -96,17 +109,17 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
         {selectedConfig ? (
           <button
             onClick={onNavigateToConfigs}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/20 transition-all group cursor-pointer shadow-sm"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-zt-surface hover:bg-zt-surface-2 border border-zt-border hover:border-zt-border-strong transition-all group cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-7 h-7 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
                 <Globe size={15} />
               </div>
               <div className="flex flex-col items-start min-w-0">
-                <span className="text-xs font-semibold text-white truncate group-hover:text-blue-400 transition-colors">
+                <span className="text-xs font-semibold text-zt-text truncate group-hover:text-zt-accent transition-colors">
                   {selectedConfig.name}
                 </span>
-                <span className="text-[10px] font-mono text-white/40 truncate">
+                <span className="text-[10px] font-mono text-zt-text-faint truncate">
                   {selectedConfig.protocol.toUpperCase()} • {selectedConfig.server}
                 </span>
               </div>
@@ -118,23 +131,23 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
                   {pingInfo.text}
                 </span>
               )}
-              <ChevronRight size={14} className="text-white/30 group-hover:text-white/70 transition-colors" />
+              <ChevronRight size={14} className="text-zt-text-faint group-hover:text-zt-text transition-colors" />
             </div>
           </button>
         ) : (
           <button
             onClick={onOpenAddModal}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/8 border border-dashed border-white/15 hover:border-blue-500/50 transition-all text-white/80 group cursor-pointer"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-zt-surface hover:bg-zt-surface-2 border border-dashed border-zt-border hover:border-zt-accent/50 transition-all text-zt-text-muted group cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
                 <Plus size={15} />
               </div>
-              <span className="text-xs font-medium text-white/80 group-hover:text-white">
+              <span className="text-xs font-medium text-zt-text-muted group-hover:text-zt-text">
                 Add Server Configuration
               </span>
             </div>
-            <Zap size={14} className="text-white/30 group-hover:text-blue-400" />
+            <Zap size={14} className="text-zt-text-faint group-hover:text-zt-accent" />
           </button>
         )}
       </div>
