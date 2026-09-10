@@ -113,6 +113,7 @@ pub struct AppSettings {
     pub fragment_packets: String,
     pub fragment_length: String,
     pub fragment_interval: String,
+    #[serde(default)]
     pub kill_switch: bool,
     pub auto_connect: bool,
     pub minimize_to_tray: bool,
@@ -134,7 +135,7 @@ impl Default for AppSettings {
             fragment_packets: "tlshello".to_string(),
             fragment_length: "10-30".to_string(),
             fragment_interval: "10-20".to_string(),
-            kill_switch: true,
+            kill_switch: false,
             auto_connect: false,
             minimize_to_tray: true,
             theme: "dark".to_string(),

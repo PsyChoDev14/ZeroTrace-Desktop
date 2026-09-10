@@ -58,10 +58,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       if (res.hasUpdate && res.update) {
         onShowUpdateModal?.(res.update);
       } else {
-        setUpdateMsg(`You're up to date - v${CURRENT_APP_VERSION} is the latest version.`);
+        setUpdateMsg(`Up to date • v${CURRENT_APP_VERSION}`);
+        setTimeout(() => setUpdateMsg(null), 4000);
       }
     } catch {
-      setUpdateMsg('Could not check for updates. Please check your internet connection.');
+      setUpdateMsg('Could not check for updates');
+      setTimeout(() => setUpdateMsg(null), 4000);
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -249,27 +251,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </button>
           </div>
 
-          {/* Kill Switch */}
-          <div className="p-3 flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="font-medium text-zt-text">Kill Switch</span>
-              <span className="text-[11px] text-zt-text-muted">Block traffic if tunnel disconnects</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => updateSetting('killSwitch', !current.killSwitch)}
-              className={`w-11 h-6 rounded-full transition-colors duration-200 relative cursor-pointer outline-none ${
-                current.killSwitch ? 'bg-zt-accent' : 'bg-zt-border-strong'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out absolute top-1 left-1 ${
-                  current.killSwitch ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
           {/* Mux Multiplexing */}
           <div className="p-3 flex items-center justify-between">
             <div className="flex flex-col">
@@ -416,7 +397,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <span className="font-medium text-zt-text group-hover:text-zt-accent transition-colors">
                   Software Update
                 </span>
-                <span className="text-[11px] text-zt-text-muted mt-0.5">
+                <span className="text-[11px] text-zt-text-muted mt-0.5 transition-colors">
                   {updateMsg || 'Check for new releases & patches'}
                 </span>
               </div>

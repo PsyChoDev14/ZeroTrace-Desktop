@@ -1,18 +1,19 @@
 {
-  "version": "1.3.5",
-  "versionCode": 22,
+  "version": "1.3.6",
+  "versionCode": 23,
   "releaseDate": "2026-09-10",
   "changelog": [
-    "Kill Switch now detects a crashed tunnel and blocks traffic instead of silently falling back to a direct, unprotected connection",
-    "Fixed manual \"Check for Updates\" showing a fake update when you were already on the latest version",
-    "Server sharing and importing now use real, scannable QR codes instead of a placeholder icon",
-    "Fixed pasted custom JSON configs showing a placeholder server address instead of the real one",
-    "UI and theme refinements across Settings, Update, and the connection screen"
+    "Automatic fail-open: direct internet connection is always restored immediately if tunnel disconnects",
+    "Removed Kill Switch traffic blocking to prevent connection lockouts",
+    "Added 150ms startup core engine health probe to prevent false-positive states",
+    "Full Apple HIG adaptive light mode styling for all modals and dialogs",
+    "Fluid spring animations for all modal sheets, backdrop blur transitions, and navigation controls",
+    "Clean multi-interface macOS system proxy teardown"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.5/ZeroTrace_1.3.5_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.6/ZeroTrace_1.3.6_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.5/ZeroTrace_1.3.5_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.6/ZeroTrace_1.3.6_aarch64.dmg"
   }
 }

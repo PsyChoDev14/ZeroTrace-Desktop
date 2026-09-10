@@ -72,7 +72,10 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
               Connection Lost
             </div>
             <span className="text-xs text-zt-text-muted mt-0.5 max-w-[260px] text-center">
-              {vpnState.errorMessage || 'The tunnel disconnected unexpectedly.'}
+              {vpnState.errorMessage || 'Tunnel disconnected. Direct internet active.'}
+            </span>
+            <span className="text-[11px] text-zt-text-faint mt-1">
+              Tap dial to reconnect
             </span>
           </>
         ) : (

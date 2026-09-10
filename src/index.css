@@ -150,6 +150,12 @@
 }
 
 /* Universal Light Theme Card / Surface / Text Adaptations */
+.theme-light .fixed.inset-0.bg-black\/65,
+.theme-light .fixed.inset-0.bg-black\/75,
+.theme-light .modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.28) !important;
+}
+
 .theme-light .bg-white\/5 {
   background-color: #FFFFFF !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);

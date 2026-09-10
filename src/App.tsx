@@ -81,6 +81,12 @@ export function App() {
 
   const isLightMode = settings.theme === 'light' || (settings.theme === 'system' && !systemDark);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('theme-light', isLightMode);
+    }
+  }, [isLightMode]);
+
   // Initial load
   useEffect(() => {
     async function loadData() {
@@ -214,16 +220,24 @@ export function App() {
       });
       api.getLogs().then(l => l && setLogs(l));
     } else {
-      setVpnState({ status: 'connecting' });
-      if (!selectedId && configs.length > 0) {
-        await api.connect(configs[0].id);
+      setVpnState({ status: 'connecting', errorMessage: undefined });
+      try {
+        if (!selectedId && configs.length > 0) {
+          await api.connect(configs[0].id);
+        } else if (selectedId) {
+          await api.connect(selectedId);
+        } else {
+          setVpnState({ status: 'disconnected', errorMessage: undefined });
+          setIsAddOpen(true);
+        }
+      } catch (err) {
+        console.error('Connection failed:', err);
+        setVpnState({
+          status: 'disconnected',
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
         api.getLogs().then(l => l && setLogs(l));
-      } else if (selectedId) {
-        await api.connect(selectedId);
-        api.getLogs().then(l => l && setLogs(l));
-      } else {
-        setVpnState({ status: 'disconnected' });
-        setIsAddOpen(true);
       }
     }
   }, [vpnState.status, selectedId, configs]);
@@ -386,6 +400,7 @@ export function App() {
         isOpen={availableUpdate !== null}
         updateInfo={availableUpdate}
         onClose={() => setAvailableUpdate(null)}
+        isLightMode={isLightMode}
       />
     </div>
   );

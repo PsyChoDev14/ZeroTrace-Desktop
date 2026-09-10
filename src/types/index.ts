@@ -56,7 +56,7 @@ export interface AppSettings {
   fragmentPackets: string;
   fragmentLength: string;
   fragmentInterval: string;
-  killSwitch: boolean;
+  killSwitch?: boolean;
   autoConnect: boolean;
   minimizeToTray: boolean;
   theme?: 'dark' | 'light' | 'system';

@@ -58,53 +58,27 @@ fn tunnel_process_alive(ctx: &mut AppContext) -> bool {
 pub fn get_state(state: State<SharedState>) -> VpnState {
     let mut ctx = state.lock();
 
-    // Kill Switch enforcement: every poll, verify the tunnel process that is
-    // supposed to be carrying traffic is actually still running. Without
-    // this check an unexpected crash of sing-box/Xray would leave the UI
-    // reporting "Protected Tunnel Active" indefinitely while traffic quietly
-    // falls back to a direct, unprotected connection.
+    // Tunnel health verification: verify the tunnel process carrying traffic is actually still running.
+    // If the process terminated unexpectedly, fail open and restore direct network connectivity immediately.
     if ctx.vpn_state.status == "connected" && !tunnel_process_alive(&mut *ctx) {
-        if ctx.settings.kill_switch {
-            // Kill Switch ON: deliberately do NOT tear down the system
-            // proxy / routing configuration here. Leaving it pointed at the
-            // now-dead local tunnel means proxy-aware traffic fails closed
-            // (connection refused) instead of silently leaking direct.
-            // The user must explicitly reconnect or disconnect to clear it.
-            ctx.add_log(
-                "ERROR",
-                "KillSwitch",
-                "Tunnel process terminated unexpectedly. Kill Switch engaged: network access stays blocked until you reconnect.",
-            );
-            ctx.vpn_state = VpnState {
-                status: "error".to_string(),
-                server_name: ctx.vpn_state.server_name.clone(),
-                server_address: ctx.vpn_state.server_address.clone(),
-                connected_at: None,
-                error_message: Some(
-                    "Kill Switch engaged - the tunnel was lost and network traffic is being blocked. Reconnect to restore internet access.".to_string(),
-                ),
-            };
-        } else {
-            // Kill Switch OFF: fail open, restore direct connectivity immediately.
-            ctx.add_log(
-                "WARN",
-                "ZeroTrace",
-                "Tunnel process terminated unexpectedly. Kill Switch is off; restoring direct connectivity.",
-            );
-            ctx.tun_manager.stop_tunnel();
-            ctx.xray_process.stop();
-            ctx.vpn_state = VpnState {
-                status: "disconnected".to_string(),
-                server_name: None,
-                server_address: None,
-                connected_at: None,
-                error_message: Some("Tunnel process terminated unexpectedly.".to_string()),
-            };
-            ctx.traffic_stats.download_speed = 0;
-            ctx.traffic_stats.upload_speed = 0;
-            ctx.last_stats_poll = None;
-            ctx.last_octets = None;
-        }
+        ctx.add_log(
+            "WARN",
+            "ZeroTrace",
+            "Tunnel process terminated unexpectedly; restoring direct connectivity.",
+        );
+        ctx.tun_manager.stop_tunnel();
+        ctx.xray_process.stop();
+        ctx.vpn_state = VpnState {
+            status: "disconnected".to_string(),
+            server_name: None,
+            server_address: None,
+            connected_at: None,
+            error_message: Some("Tunnel connection was lost. Direct connection restored.".to_string()),
+        };
+        ctx.traffic_stats.download_speed = 0;
+        ctx.traffic_stats.upload_speed = 0;
+        ctx.last_stats_poll = None;
+        ctx.last_octets = None;
     }
 
     ctx.vpn_state.clone()
@@ -190,6 +164,25 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
             error_message: None,
         };
         ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
+        drop(ctx);
+
+        // Verify Sing-box process actually started and didn't crash
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        {
+            let mut ctx = state.lock();
+            if !tunnel_process_alive(&mut *ctx) {
+                ctx.tun_manager.stop_tunnel();
+                ctx.vpn_state = VpnState {
+                    status: "disconnected".to_string(),
+                    server_name: None,
+                    server_address: None,
+                    connected_at: None,
+                    error_message: Some("Sing-box core exited immediately upon launch. Direct connection restored.".to_string()),
+                };
+                ctx.add_log("ERROR", "ZeroTrace", "Sing-box core exited immediately upon launch; direct connection restored.");
+                return Err("Sing-box core failed to stay running".to_string());
+            }
+        }
         return Ok(true);
     }
 
@@ -257,6 +250,25 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
                 error_message: None,
             };
             ctx.add_log("INFO", "TunManager", "macOS high-speed system proxy active. Traffic routed via Xray tunnel.");
+        }
+
+        // 4. Verify Xray process actually started and didn't crash during launch
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        {
+            let mut ctx = state.lock();
+            if !tunnel_process_alive(&mut *ctx) {
+                ctx.tun_manager.stop_tunnel();
+                ctx.xray_process.stop();
+                ctx.vpn_state = VpnState {
+                    status: "disconnected".to_string(),
+                    server_name: None,
+                    server_address: None,
+                    connected_at: None,
+                    error_message: Some("Xray core exited immediately upon launch. Direct connection restored.".to_string()),
+                };
+                ctx.add_log("ERROR", "ZeroTrace", "Xray core exited immediately upon launch; direct connection restored.");
+                return Err("Xray core failed to stay running".to_string());
+            }
         }
 
         Ok(true)

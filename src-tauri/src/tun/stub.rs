@@ -70,16 +70,10 @@ impl StubTunManager {
     }
 
     pub fn stop_tunnel(&mut self) {
-        if self.is_active.swap(false, Ordering::SeqCst) {
-            if let Some(ref service) = self.active_service.take() {
-                println!("[StubTunManager] Restoring macOS network settings for '{}'...", service);
-                let _ = Command::new("networksetup").args(&["-setsocksfirewallproxystate", service, "off"]).output();
-                let _ = Command::new("networksetup").args(&["-setwebproxystate", service, "off"]).output();
-                let _ = Command::new("networksetup").args(&["-setsecurewebproxystate", service, "off"]).output();
-                let _ = Command::new("networksetup").args(&["-setproxybypassdomains", service, "empty"]).output();
-                println!("[StubTunManager] macOS system proxy disabled. Direct connection restored.");
-            }
-        }
+        self.is_active.store(false, Ordering::SeqCst);
+        self.active_service = None;
+        Self::cleanup_stale_proxies();
+        println!("[StubTunManager] macOS system proxy disabled. Direct connection restored.");
     }
 
     pub fn is_active(&self) -> bool {
@@ -87,12 +81,19 @@ impl StubTunManager {
     }
 
     pub fn cleanup_stale_proxies() {
-        if let Some(service) = Self::get_active_mac_service() {
-            println!("[StubTunManager] Checking and cleaning stale macOS system proxy for '{}' on startup...", service);
-            let _ = Command::new("networksetup").args(&["-setsocksfirewallproxystate", &service, "off"]).output();
-            let _ = Command::new("networksetup").args(&["-setwebproxystate", &service, "off"]).output();
-            let _ = Command::new("networksetup").args(&["-setsecurewebproxystate", &service, "off"]).output();
-            let _ = Command::new("networksetup").args(&["-setproxybypassdomains", &service, "empty"]).output();
+        println!("[StubTunManager] Resetting macOS system proxies across all interfaces...");
+        if let Ok(output) = Command::new("networksetup").args(&["-listallnetworkservices"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let service = line.trim();
+                if service.is_empty() || service.starts_with('*') || service.contains("An asterisk") {
+                    continue;
+                }
+                let _ = Command::new("networksetup").args(&["-setsocksfirewallproxystate", service, "off"]).output();
+                let _ = Command::new("networksetup").args(&["-setwebproxystate", service, "off"]).output();
+                let _ = Command::new("networksetup").args(&["-setsecurewebproxystate", service, "off"]).output();
+                let _ = Command::new("networksetup").args(&["-setproxybypassdomains", service, "empty"]).output();
+            }
         }
     }
 
