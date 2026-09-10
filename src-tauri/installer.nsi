@@ -424,7 +424,7 @@ Var AppStartMenuFolder
 !insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
-  nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
+  ExecShell "open" "$INSTDIR\${MAINBINARYNAME}.exe"
 FunctionEnd
 
 ; Uninstaller Pages
@@ -752,7 +752,7 @@ SectionEnd
 Function .onInstSuccess
   ; In Modern One-Click mode, always auto-launch ZeroTrace upon install completion
   ${If} $NoShortcutMode <> 1
-    nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
+    ExecShell "open" "$INSTDIR\${MAINBINARYNAME}.exe"
   ${EndIf}
 FunctionEnd
 

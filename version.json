@@ -1,17 +1,17 @@
 {
-  "version": "1.3.7",
-  "versionCode": 24,
+  "version": "1.3.8",
+  "versionCode": 25,
   "releaseDate": "2026-09-10",
   "changelog": [
-    "Fixed Windows Sing-box crash: 'unsupported flow: none' on VLESS configurations",
-    "Sanitized flow parameter to prevent core engine termination",
-    "Scoped background thread MutexGuard to ensure smooth Windows async execution",
+    "Fixed Windows Wintun TUN creation: embedded UAC administrator manifest to prevent 'Access is denied' error",
+    "Enhanced Windows launcher to execute elevated so kernel network adapters configure seamlessly",
+    "Added administrator privilege diagnostics and actionable guidance if TUN configuration is blocked",
     "Automatic fail-open: direct internet connection is always restored immediately if tunnel disconnects"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.7/ZeroTrace_1.3.7_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_x64-setup.exe"
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.7/ZeroTrace_1.3.7_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_aarch64.dmg"
   }
 }

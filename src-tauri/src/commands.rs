@@ -168,20 +168,30 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
         }
 
         // Verify Sing-box process actually started and didn't crash
-        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
         {
             let mut ctx = state.lock();
             if !tunnel_process_alive(&mut *ctx) {
                 ctx.tun_manager.stop_tunnel();
+                let is_access_denied = ctx.logs.iter().rev().take(15).any(|l| {
+                    l.message.contains("Access is denied")
+                        || l.message.contains("access is denied")
+                        || l.message.contains("configure tun interface")
+                });
+                let err_msg = if is_access_denied {
+                    "Administrator privileges required to configure Wintun TUN interface. Please right-click ZeroTrace and select 'Run as Administrator'.".to_string()
+                } else {
+                    "Sing-box core exited immediately upon launch. Direct connection restored.".to_string()
+                };
                 ctx.vpn_state = VpnState {
                     status: "disconnected".to_string(),
                     server_name: None,
                     server_address: None,
                     connected_at: None,
-                    error_message: Some("Sing-box core exited immediately upon launch. Direct connection restored.".to_string()),
+                    error_message: Some(err_msg.clone()),
                 };
-                ctx.add_log("ERROR", "ZeroTrace", "Sing-box core exited immediately upon launch; direct connection restored.");
-                return Err("Sing-box core failed to stay running".to_string());
+                ctx.add_log("ERROR", "ZeroTrace", &err_msg);
+                return Err(err_msg);
             }
         }
         return Ok(true);
