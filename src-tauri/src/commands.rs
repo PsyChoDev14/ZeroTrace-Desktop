@@ -136,35 +136,36 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
             state_clone.lock().add_log(level, tag, msg);
         });
 
-        let mut ctx = state.lock();
-        if let Err(e) = ctx.tun_manager.start_tunnel(
-            &config,
-            &settings,
-            resolved_ip.as_deref(),
-            &app_dir,
-            Some(log_cb),
-        ) {
-            ctx.vpn_state = VpnState {
-                status: "error".to_string(),
-                server_name: None,
-                server_address: None,
-                connected_at: None,
-                error_message: Some(e.clone()),
-            };
-            ctx.add_log("ERROR", "SingBox-Core", &format!("Failed to activate tunnel: {}", e));
-            return Err(e);
-        }
+        {
+            let mut ctx = state.lock();
+            if let Err(e) = ctx.tun_manager.start_tunnel(
+                &config,
+                &settings,
+                resolved_ip.as_deref(),
+                &app_dir,
+                Some(log_cb),
+            ) {
+                ctx.vpn_state = VpnState {
+                    status: "error".to_string(),
+                    server_name: None,
+                    server_address: None,
+                    connected_at: None,
+                    error_message: Some(e.clone()),
+                };
+                ctx.add_log("ERROR", "SingBox-Core", &format!("Failed to activate tunnel: {}", e));
+                return Err(e);
+            }
 
-        let now = chrono::Utc::now().timestamp_millis();
-        ctx.vpn_state = VpnState {
-            status: "connected".to_string(),
-            server_name: Some(config.name.clone()),
-            server_address: Some(format!("{}:{}", config.server, config.port)),
-            connected_at: Some(now),
-            error_message: None,
-        };
-        ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
-        drop(ctx);
+            let now = chrono::Utc::now().timestamp_millis();
+            ctx.vpn_state = VpnState {
+                status: "connected".to_string(),
+                server_name: Some(config.name.clone()),
+                server_address: Some(format!("{}:{}", config.server, config.port)),
+                connected_at: Some(now),
+                error_message: None,
+            };
+            ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
+        }
 
         // Verify Sing-box process actually started and didn't crash
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
