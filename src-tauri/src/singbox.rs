@@ -20,15 +20,59 @@ impl SingboxConfigGenerator {
             "94.140.14.14"
         };
 
-        // 1. DNS Configuration (sing-box 1.14+ format)
+        // 1. DNS Configuration (sing-box 1.14+ format with encrypted DNS-over-HTTPS)
+        let remote_dns_server = match primary_dns {
+            "94.140.14.14" => json!({
+                "type": "https",
+                "tag": "dns-remote",
+                "server": "94.140.14.14",
+                "server_port": 443,
+                "path": "/dns-query",
+                "detour": "proxy"
+            }),
+            "1.1.1.2" => json!({
+                "type": "https",
+                "tag": "dns-remote",
+                "server": "1.1.1.2",
+                "server_port": 443,
+                "path": "/dns-query",
+                "detour": "proxy"
+            }),
+            "1.1.1.1" => json!({
+                "type": "https",
+                "tag": "dns-remote",
+                "server": "1.1.1.1",
+                "server_port": 443,
+                "path": "/dns-query",
+                "detour": "proxy"
+            }),
+            "9.9.9.9" => json!({
+                "type": "https",
+                "tag": "dns-remote",
+                "server": "9.9.9.9",
+                "server_port": 443,
+                "path": "/dns-query",
+                "detour": "proxy"
+            }),
+            "8.8.8.8" => json!({
+                "type": "https",
+                "tag": "dns-remote",
+                "server": "8.8.8.8",
+                "server_port": 443,
+                "path": "/dns-query",
+                "detour": "proxy"
+            }),
+            other => json!({
+                "type": "udp",
+                "tag": "dns-remote",
+                "server": other,
+                "detour": "proxy"
+            }),
+        };
+
         let dns = json!({
             "servers": [
-                {
-                    "type": "udp",
-                    "tag": "dns-remote",
-                    "server": primary_dns,
-                    "detour": "proxy"
-                },
+                remote_dns_server,
                 {
                     "type": "local",
                     "tag": "dns-direct",
@@ -365,9 +409,9 @@ mod tests {
 
         let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
 
-        // Verify DNS (sing-box 1.14+ format)
+        // Verify DNS (sing-box 1.14+ format with DoH)
         let dns = &root["dns"];
-        assert_eq!(dns["servers"][0]["type"], "udp");
+        assert_eq!(dns["servers"][0]["type"], "https");
         assert_eq!(dns["servers"][0]["server"], "94.140.14.14");
         assert_eq!(dns["servers"][1]["type"], "local");
 
@@ -520,5 +564,41 @@ mod tests {
             r.get("ip_version") == Some(&json!(6)) && r.get("outbound") == Some(&json!("block"))
         });
         assert!(has_ipv6_block, "Must contain IPv6 block rule for leak prevention");
+    }
+
+    #[test]
+    fn test_singbox_doh_configuration() {
+        let config = ProxyConfig {
+            id: "test-doh".to_string(),
+            name: "Test DoH".to_string(),
+            protocol: ProxyProtocol::Vless,
+            server: "1.2.3.4".to_string(),
+            port: 443,
+            uuid: "1c803087-b9f6-4be8-bedc-ab3c541d3970".to_string(),
+            security: "tls".to_string(),
+            network: "tcp".to_string(),
+            sni: "".to_string(),
+            path: "".to_string(),
+            flow: "".to_string(),
+            public_key: "".to_string(),
+            short_id: "".to_string(),
+            fingerprint: "chrome".to_string(),
+            service_name: "".to_string(),
+            alter_id: 0,
+            cipher: "auto".to_string(),
+            raw_config: "".to_string(),
+            ping_ms: 25,
+            created_at: 0,
+        };
+
+        let mut settings = AppSettings::default();
+        settings.primary_dns = "1.1.1.2".to_string(); // Cloudflare Security DoH
+        let json_str = SingboxConfigGenerator::generate_runtime_json(&config, &settings, None);
+        let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
+        let servers = root["dns"]["servers"].as_array().expect("dns servers");
+        assert_eq!(servers[0]["type"], "https", "Must configure HTTPS DNS type for DoH");
+        assert_eq!(servers[0]["server"], "1.1.1.2");
+        assert_eq!(servers[0]["server_port"], 443);
+        assert_eq!(servers[0]["path"], "/dns-query");
     }
 }

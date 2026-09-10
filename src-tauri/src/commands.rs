@@ -33,7 +33,7 @@ impl AppContext {
             message: message.to_string(),
         };
         self.logs.push(entry);
-        if self.logs.len() > 500 {
+        if self.logs.len() > 150 {
             self.logs.remove(0);
         }
     }
@@ -598,6 +598,7 @@ pub struct DownloadProgressPayload {
 pub async fn download_and_install_update(
     window: tauri::WebviewWindow,
     url: String,
+    expected_sha256: Option<String>,
 ) -> Result<String, String> {
     // Security check: strictly whitelist official GitHub release URLs
     let allowed_prefix = "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/";
@@ -699,7 +700,31 @@ pub async fn download_and_install_update(
         return Err("Download failed. Please check your internet connection.".to_string());
     }
 
-    emit_progress(100.0, "verifying", "Verifying package integrity...");
+    emit_progress(100.0, "verifying", "Verifying cryptographic SHA-256 integrity...");
+
+    // Cryptographic SHA-256 Verification
+    use sha2::{Digest, Sha256};
+    let mut file = std::fs::File::open(&installer_path)
+        .map_err(|e| format!("Failed to open downloaded package for verification: {}", e))?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)
+        .map_err(|e| format!("Failed to compute package hash: {}", e))?;
+    let computed_hash = format!("{:x}", hasher.finalize());
+
+    println!("[Updater] Downloaded package SHA-256: {}", computed_hash);
+
+    if let Some(expected) = expected_sha256.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        if !computed_hash.eq_ignore_ascii_case(expected) {
+            let _ = std::fs::remove_file(&installer_path);
+            let err = format!(
+                "Security Alert: SHA-256 checksum mismatch! Expected: {}, Computed: {}. The file was deleted for safety.",
+                expected, computed_hash
+            );
+            eprintln!("[Updater] {}", err);
+            return Err(err);
+        }
+        println!("[Updater] Cryptographic SHA-256 signature verified!");
+    }
 
     if is_windows {
         emit_progress(100.0, "installing", "Launching ZeroTrace installer...");
@@ -883,7 +908,7 @@ pub fn export_diagnostic_report(state: State<SharedState>) -> String {
         .collect::<Vec<_>>()
         .join("\n");
 
-    format!(
+    let raw_report = format!(
         "=== ZeroTrace Desktop Diagnostic Report ===\n\
         Time: {}\n\
         Platform: {}\n\
@@ -908,7 +933,31 @@ pub fn export_diagnostic_report(state: State<SharedState>) -> String {
         proxy_verification,
         ctx.logs.len(),
         logs_text
-    )
+    );
+
+    sanitize_diagnostic_text(&raw_report)
+}
+
+/// Redacts public IPv4 addresses and UUID tokens to prevent credential or server leaks in diagnostics.
+fn sanitize_diagnostic_text(text: &str) -> String {
+    use regex::Regex;
+    // Mask public IPv4 addresses (e.g. 172.104.47.65 -> 172.***.***.65), keeping 127.0.0.1 and 0.0.0.0 intact
+    let ip_re = match Regex::new(r"\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\b") {
+        Ok(re) => re,
+        Err(_) => return text.to_string(),
+    };
+    let sanitized_ip = ip_re.replace_all(text, |caps: &regex::Captures| {
+        format!("{}.***.***.{}", &caps[1], &caps[4])
+    });
+
+    // Mask UUIDs: e.g. 1c803087-b9f6-4be8-bedc-ab3c541d3970 -> 1c80***3970
+    let uuid_re = match Regex::new(r"\b([a-fA-F0-9]{4})[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{8}([a-fA-F0-9]{4})\b") {
+        Ok(re) => re,
+        Err(_) => return sanitized_ip.to_string(),
+    };
+    let sanitized_uuid = uuid_re.replace_all(&sanitized_ip, "${1}***${2}");
+
+    sanitized_uuid.to_string()
 }
 
 

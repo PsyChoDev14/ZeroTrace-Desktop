@@ -24,6 +24,8 @@ parking_lot = "0.12"
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 socket2 = "0.5"
+sha2 = "0.10"
+regex = "1"
 
 [target.'cfg(windows)'.dependencies]
 wintun = "0.5"

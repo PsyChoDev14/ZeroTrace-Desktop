@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Terminal, Trash2, Copy, Check, ArrowLeft, Download, MessageCircle, RefreshCw } from 'lucide-react';
+import { Terminal, Trash2, Copy, Check, ArrowLeft, Download, MessageCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { DiagnosticLog } from '../types';
 import { api, openExternalUrl } from '../utils/tauriBridge';
 
@@ -9,12 +9,23 @@ interface LogsScreenProps {
   onBack: () => void;
 }
 
+const sanitizeLogText = (text: string): string => {
+  // Mask public IPv4 addresses (keeping 127.0.0.1 and 0.0.0.0 intact)
+  const ipRegex = /\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\b/g;
+  let res = text.replace(ipRegex, '$1.***.***.$4');
+  // Mask UUID tokens
+  const uuidRegex = /\b([a-fA-F0-9]{4})[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{8}([a-fA-F0-9]{4})\b/g;
+  res = res.replace(uuidRegex, '$1***$2');
+  return res;
+};
+
 export const LogsScreen: React.FC<LogsScreenProps> = ({ logs: initialLogs, onClear, onBack }) => {
   const [liveLogs, setLiveLogs] = useState<DiagnosticLog[]>(initialLogs);
   const [copied, setCopied] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [isSending, setIsSending] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [redactPrivacy, setRedactPrivacy] = useState(true);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +77,10 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs: initialLogs, onCle
   const filteredLogs = liveLogs.filter(l => filterLevel === 'ALL' || l.level === filterLevel);
 
   const handleCopy = () => {
-    const text = liveLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n');
+    let text = liveLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n');
+    if (redactPrivacy) {
+      text = sanitizeLogText(text);
+    }
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -210,6 +224,25 @@ export const LogsScreen: React.FC<LogsScreenProps> = ({ logs: initialLogs, onCle
             <Download size={13} />
             <span>Save .txt</span>
           </button>
+        </div>
+
+        {/* Row 3: Privacy Shield / Redaction Indicator */}
+        <div className="flex items-center justify-between px-1 text-[11px] text-zt-text-muted">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={redactPrivacy}
+              onChange={e => setRedactPrivacy(e.target.checked)}
+              className="accent-zt-accent rounded cursor-pointer"
+            />
+            <span className="flex items-center gap-1 font-medium">
+              <ShieldCheck size={12} className={redactPrivacy ? 'text-emerald-400' : 'text-zt-text-muted'} />
+              <span className={redactPrivacy ? 'text-zt-text' : 'text-zt-text-muted'}>
+                Mask Server IPs & Tokens on Copy/Export
+              </span>
+            </span>
+          </label>
+          <span className="text-[10px] text-zt-text-faint">Privacy Shield</span>
         </div>
 
         {/* Toast notification */}

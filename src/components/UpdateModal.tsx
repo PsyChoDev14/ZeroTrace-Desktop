@@ -96,11 +96,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
 
     const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent || '');
     const targetUrl = isMac ? updateInfo.macos.url : updateInfo.windows.url;
+    const targetSha256 = isMac ? updateInfo.macos.sha256 : updateInfo.windows.sha256;
 
     if (isTauri()) {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('download_and_install_update', { url: targetUrl });
+        await invoke('download_and_install_update', {
+          url: targetUrl,
+          expectedSha256: targetSha256 || null,
+        });
       } catch (err: unknown) {
         console.error('In-app update failed:', err);
         setErrorText(typeof err === 'string' ? err : 'Download failed. Please check your connection.');

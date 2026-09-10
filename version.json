@@ -9,9 +9,11 @@
     "Automatic fail-open: direct internet connection is always restored immediately if tunnel disconnects"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_x64-setup.exe"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_x64-setup.exe",
+    "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_aarch64.dmg"
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.8/ZeroTrace_1.3.8_aarch64.dmg",
+    "sha256": ""
   }
 }

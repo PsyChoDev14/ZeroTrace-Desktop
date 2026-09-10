@@ -5,9 +5,11 @@ export interface AppUpdateInfo {
   changelog: string[];
   windows: {
     url: string;
+    sha256?: string;
   };
   macos: {
     url: string;
+    sha256?: string;
   };
 }
 
