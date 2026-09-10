@@ -599,7 +599,20 @@ pub async fn download_and_install_update(
     window: tauri::WebviewWindow,
     url: String,
 ) -> Result<String, String> {
+    // Security check: strictly whitelist official GitHub release URLs
+    let allowed_prefix = "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/";
+    if !url.starts_with(allowed_prefix) {
+        return Err("Untrusted update source. Updates may only be downloaded from official ZeroTrace releases.".to_string());
+    }
+
     let is_windows = cfg!(windows);
+    if is_windows && !url.ends_with(".exe") && !url.ends_with(".msi") {
+        return Err("Invalid Windows installer file format.".to_string());
+    }
+    if !is_windows && !url.ends_with(".dmg") {
+        return Err("Invalid macOS installer file format.".to_string());
+    }
+
     let temp_dir = std::env::temp_dir();
     let installer_path = if is_windows {
         temp_dir.join("ZeroTrace-Update-Setup.exe")

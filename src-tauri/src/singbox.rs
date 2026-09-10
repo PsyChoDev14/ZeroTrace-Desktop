@@ -73,6 +73,11 @@ impl SingboxConfigGenerator {
             json!({
                 "action": "hijack-dns",
                 "protocol": "dns"
+            }),
+            // IPv6 Leak Protection: drop any IPv6 traffic outside the IPv4 Wintun adapter
+            json!({
+                "ip_version": 6,
+                "outbound": "block"
             })
         ];
 
@@ -480,5 +485,40 @@ mod tests {
         let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
         let outbounds = root["outbounds"].as_array().expect("outbounds array");
         assert!(outbounds[0].get("flow").is_none(), "flow should NOT be set when flow is 'none'");
+    }
+
+    #[test]
+    fn test_singbox_ipv6_leak_protection() {
+        let config = ProxyConfig {
+            id: "test-ipv6".to_string(),
+            name: "Test IPv6".to_string(),
+            protocol: ProxyProtocol::Vless,
+            server: "1.2.3.4".to_string(),
+            port: 443,
+            uuid: "1c803087-b9f6-4be8-bedc-ab3c541d3970".to_string(),
+            security: "tls".to_string(),
+            network: "tcp".to_string(),
+            sni: "".to_string(),
+            path: "".to_string(),
+            flow: "".to_string(),
+            public_key: "".to_string(),
+            short_id: "".to_string(),
+            fingerprint: "chrome".to_string(),
+            service_name: "".to_string(),
+            alter_id: 0,
+            cipher: "auto".to_string(),
+            raw_config: "".to_string(),
+            ping_ms: 25,
+            created_at: 0,
+        };
+
+        let settings = AppSettings::default();
+        let json_str = SingboxConfigGenerator::generate_runtime_json(&config, &settings, None);
+        let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
+        let rules = root["route"]["rules"].as_array().expect("rules array");
+        let has_ipv6_block = rules.iter().any(|r| {
+            r.get("ip_version") == Some(&json!(6)) && r.get("outbound") == Some(&json!("block"))
+        });
+        assert!(has_ipv6_block, "Must contain IPv6 block rule for leak prevention");
     }
 }
