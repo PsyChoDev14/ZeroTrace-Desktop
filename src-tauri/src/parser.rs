@@ -94,7 +94,13 @@ impl ConfigParser {
             match k.as_ref() {
                 "security" => security = v.to_string(),
                 "type" => network = v.to_string(),
-                "flow" => flow = v.to_string(),
+                "flow" => {
+                    if v.to_lowercase().contains("vision") {
+                        flow = "xtls-rprx-vision".to_string();
+                    } else {
+                        flow = "".to_string();
+                    }
+                }
                 "sni" | "host" => if sni.is_empty() { sni = v.to_string(); },
                 "path" => path = v.to_string(),
                 "pbk" => pbk = v.to_string(),
@@ -502,5 +508,12 @@ mod tests {
         let parsed = ConfigParser::parse_single(caption).expect("Should extract embedded URI from caption");
         assert_eq!(parsed.protocol, ProxyProtocol::Vless);
         assert_eq!(parsed.name, "SG-01");
+    }
+
+    #[test]
+    fn test_parse_vless_flow_none() {
+        let uri = "vless://1c803087-b9f6-4be8-bedc-ab3c541d3970@node1.novalink.lk:443?security=tls&flow=none&type=tcp#TestFlowNone";
+        let parsed = ConfigParser::parse_single(uri).expect("Should parse VLESS");
+        assert_eq!(parsed.flow, "");
     }
 }

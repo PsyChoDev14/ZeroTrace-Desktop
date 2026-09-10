@@ -291,8 +291,9 @@ impl XrayConfigGenerator {
                 // XTLS Vision is strictly valid for raw TCP + TLS/Reality streams
                 let is_tcp = config.network.is_empty() || config.network.eq_ignore_ascii_case("tcp");
                 let is_tls_or_reality = config.security.eq_ignore_ascii_case("tls") || config.security.eq_ignore_ascii_case("reality");
-                if !config.flow.is_empty() && is_tcp && is_tls_or_reality {
-                    user["flow"] = json!(config.flow);
+                let has_vision = config.flow.to_lowercase().contains("vision");
+                if has_vision && is_tcp && is_tls_or_reality {
+                    user["flow"] = json!("xtls-rprx-vision");
                 }
 
                 outbound["settings"] = json!({

@@ -145,8 +145,9 @@ impl SingboxConfigGenerator {
                     "packet_encoding": "xudp"
                 });
 
-                if !config.flow.is_empty() {
-                    outbound["flow"] = json!(config.flow);
+                let has_vision = config.flow.to_lowercase().contains("vision");
+                if has_vision {
+                    outbound["flow"] = json!("xtls-rprx-vision");
                 }
 
                 let is_tls = config.security.eq_ignore_ascii_case("tls");
@@ -442,5 +443,42 @@ mod tests {
         assert_eq!(outbounds[0]["type"], "vless");
         assert_eq!(outbounds[0]["tls"]["server_name"], "api.zoom.us");
         assert_eq!(outbounds[0]["tls"]["insecure"], true);
+    }
+
+    #[test]
+    fn test_singbox_vless_flow_none() {
+        let config = ProxyConfig {
+            id: "test-flow-none".to_string(),
+            name: "Test Flow None".to_string(),
+            protocol: ProxyProtocol::Vless,
+            server: "node1.novalink.lk".to_string(),
+            port: 443,
+            uuid: "1c803087-b9f6-4be8-bedc-ab3c541d3970".to_string(),
+            security: "tls".to_string(),
+            network: "tcp".to_string(),
+            sni: "api.zoom.us".to_string(),
+            path: "".to_string(),
+            flow: "none".to_string(),
+            public_key: "".to_string(),
+            short_id: "".to_string(),
+            fingerprint: "chrome".to_string(),
+            service_name: "".to_string(),
+            alter_id: 0,
+            cipher: "auto".to_string(),
+            raw_config: "".to_string(),
+            ping_ms: 25,
+            created_at: 0,
+        };
+
+        let settings = AppSettings::default();
+        let json_str = SingboxConfigGenerator::generate_runtime_json(
+            &config,
+            &settings,
+            None,
+        );
+
+        let root: Value = serde_json::from_str(&json_str).expect("Valid JSON");
+        let outbounds = root["outbounds"].as_array().expect("outbounds array");
+        assert!(outbounds[0].get("flow").is_none(), "flow should NOT be set when flow is 'none'");
     }
 }
