@@ -432,10 +432,9 @@ fn decode_base64_loose(input: &str) -> Option<String> {
 }
 
 fn urlencoding_decode(input: &str) -> String {
-    url::form_urlencoded::parse(input.as_bytes())
-        .map(|(k, _)| k.to_string())
-        .collect::<Vec<_>>()
-        .join(" ")
+    percent_encoding::percent_decode_str(input)
+        .decode_utf8_lossy()
+        .to_string()
 }
 
 #[cfg(test)]
@@ -515,5 +514,12 @@ mod tests {
         let uri = "vless://1c803087-b9f6-4be8-bedc-ab3c541d3970@node1.novalink.lk:443?security=tls&flow=none&type=tcp#TestFlowNone";
         let parsed = ConfigParser::parse_single(uri).expect("Should parse VLESS");
         assert_eq!(parsed.flow, "");
+    }
+
+    #[test]
+    fn test_parse_vless_with_special_characters_in_fragment() {
+        let uri = "vless://1c803087-b9f6-4be8-bedc-ab3c541d3970@node1.novalink.lk:443?security=tls&type=tcp#ZeroTrace%20Tier%201%262%20Fast%3DHigh";
+        let parsed = ConfigParser::parse_single(uri).expect("Should parse VLESS with special characters in fragment");
+        assert_eq!(parsed.name, "ZeroTrace Tier 1&2 Fast=High");
     }
 }

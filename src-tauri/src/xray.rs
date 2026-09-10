@@ -523,7 +523,8 @@ impl XrayProcess {
         candidate_paths.push(app_dir.join("binaries").join(binary_name));
         candidate_paths.push(app_dir.join(binary_name));
 
-        // 3. Current working directory (development mode)
+        // 3. Current working directory (development mode only)
+        #[cfg(debug_assertions)]
         if let Ok(cwd) = std::env::current_dir() {
             candidate_paths.push(cwd.join("binaries").join(binary_name));
             candidate_paths.push(cwd.join("src-tauri").join("binaries").join(binary_name));

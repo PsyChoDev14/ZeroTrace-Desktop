@@ -4739,6 +4739,7 @@ dependencies = [
  "chrono",
  "libc",
  "parking_lot",
+ "percent-encoding",
  "regex",
  "serde",
  "serde_json",

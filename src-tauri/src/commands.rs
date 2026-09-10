@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use parking_lot::Mutex;
-use tauri::{Emitter, State};
+use tauri::{Emitter, Manager, State};
 
 use crate::models::{AppSettings, DiagnosticLog, ProxyConfig, TrafficStats, VpnState};
 use crate::parser::ConfigParser;
@@ -335,7 +335,26 @@ pub fn select_config(id: String, state: State<SharedState>) -> bool {
 }
 
 #[tauri::command]
-pub fn save_config(config: ProxyConfig, state: State<SharedState>) -> bool {
+pub fn save_config(mut config: ProxyConfig, state: State<SharedState>) -> bool {
+    config.name = config.name.trim().to_string();
+    config.server = config.server.trim().to_string();
+
+    if config.server.is_empty() || config.port == 0 {
+        return false;
+    }
+
+    if config.server.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return false;
+    }
+
+    if config.id.trim().is_empty() {
+        config.id = uuid::Uuid::new_v4().to_string();
+    }
+
+    if config.name.is_empty() {
+        config.name = format!("{}:{}", config.server, config.port);
+    }
+
     let mut ctx = state.lock();
     if let Some(pos) = ctx.configs.iter().position(|c| c.id == config.id) {
         ctx.configs[pos] = config;
@@ -426,7 +445,12 @@ pub fn get_settings(state: State<SharedState>) -> AppSettings {
 }
 
 #[tauri::command]
-pub fn save_settings(settings: AppSettings, state: State<SharedState>) -> bool {
+pub fn save_settings(mut settings: AppSettings, state: State<SharedState>) -> bool {
+    settings.primary_dns = settings.primary_dns.trim().to_string();
+    if settings.primary_dns.is_empty() || settings.primary_dns.parse::<std::net::IpAddr>().is_err() {
+        settings.primary_dns = "94.140.14.14".to_string();
+    }
+    settings.sri_lanka_sni_tweak = settings.sri_lanka_sni_tweak.trim().to_string();
     let mut ctx = state.lock();
     ctx.settings = settings.clone();
     let _ = ctx.storage.save_settings(&settings);
@@ -566,7 +590,7 @@ pub fn get_traffic_stats(state: State<SharedState>) -> TrafficStats {
 
 #[tauri::command]
 pub fn window_minimize(window: tauri::WebviewWindow) {
-    let _ = window.hide();
+    let _ = window.minimize();
 }
 
 #[tauri::command]
@@ -583,8 +607,15 @@ pub fn window_maximize(window: tauri::WebviewWindow) {
 }
 
 #[tauri::command]
-pub fn window_close(window: tauri::WebviewWindow) {
-    let _ = window.close();
+pub fn window_close(window: tauri::WebviewWindow, state: State<SharedState>) {
+    let minimize_to_tray = state.lock().settings.minimize_to_tray;
+    if minimize_to_tray {
+        let _ = window.hide();
+    } else {
+        do_disconnect(state.inner().clone());
+        let _ = window.close();
+        window.app_handle().exit(0);
+    }
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -757,9 +788,9 @@ pub async fn download_and_install_update(
     } else {
         emit_progress(100.0, "installing", "Installing update to /Applications...");
 
-        let mount_point = "/tmp/ZeroTraceUpdateMount";
-        let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
-        let _ = std::fs::create_dir_all(mount_point);
+        let mount_point = format!("/tmp/ZeroTraceUpdateMount-{}", std::process::id());
+        let _ = std::process::Command::new("hdiutil").args(&["detach", &mount_point, "-force"]).output();
+        let _ = std::fs::create_dir_all(&mount_point);
 
         // 1. Mount DMG silently without Finder popup
         let mount_res = std::process::Command::new("hdiutil")
@@ -769,19 +800,26 @@ pub async fn download_and_install_update(
                 "-readonly",
                 installer_path.to_str().unwrap(),
                 "-mountpoint",
-                mount_point,
+                &mount_point,
             ])
             .output()
             .map_err(|e| format!("Failed to mount DMG: {}", e))?;
 
         if !mount_res.status.success() {
             let err = String::from_utf8_lossy(&mount_res.stderr);
+            let _ = std::fs::remove_dir_all(&mount_point);
             return Err(format!("Failed to mount DMG: {}", err));
         }
 
-        // 2. In-place replace /Applications/ZeroTrace.app
+        // 2. Verify source app exists before touching /Applications/ZeroTrace.app
         let source_app = format!("{}/ZeroTrace.app", mount_point);
         let target_app = "/Applications/ZeroTrace.app";
+
+        if !std::path::Path::new(&source_app).exists() {
+            let _ = std::process::Command::new("hdiutil").args(&["detach", &mount_point, "-force"]).output();
+            let _ = std::fs::remove_dir_all(&mount_point);
+            return Err("Corrupted update package: ZeroTrace.app not found in disk image.".to_string());
+        }
 
         let _ = std::process::Command::new("rm").args(&["-rf", target_app]).output();
         let copy_res = std::process::Command::new("cp")
@@ -791,7 +829,8 @@ pub async fn download_and_install_update(
 
         if !copy_res.status.success() {
             let err = String::from_utf8_lossy(&copy_res.stderr);
-            let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
+            let _ = std::process::Command::new("hdiutil").args(&["detach", &mount_point, "-force"]).output();
+            let _ = std::fs::remove_dir_all(&mount_point);
             return Err(format!("Failed to install app to /Applications: {}", err));
         }
 
@@ -801,8 +840,8 @@ pub async fn download_and_install_update(
             .output();
 
         // 4. Detach DMG and cleanup temp files
-        let _ = std::process::Command::new("hdiutil").args(&["detach", mount_point, "-force"]).output();
-        let _ = std::fs::remove_dir_all(mount_point);
+        let _ = std::process::Command::new("hdiutil").args(&["detach", &mount_point, "-force"]).output();
+        let _ = std::fs::remove_dir_all(&mount_point);
         let _ = std::fs::remove_file(&installer_path);
 
         emit_progress(100.0, "restarting", "Restarting ZeroTrace...");
@@ -828,6 +867,12 @@ pub async fn download_and_install_update(
 
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
+    // 1. Strict scheme validation: only permit safe web/contact links
+    let is_safe = url.starts_with("https://") || url.starts_with("http://") || url.starts_with("mailto:");
+    if !is_safe {
+        return Err("Blocked unsafe URL protocol".to_string());
+    }
+
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
@@ -838,9 +883,10 @@ pub fn open_url(url: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
-        let mut cmd = std::process::Command::new("cmd");
-        cmd.args(&["/c", "start", "", &url]);
         const CREATE_NO_WINDOW: u32 = 0x08000000;
+        // Avoid cmd.exe /c start to eliminate shell metacharacter and argument injection vulnerabilities
+        let mut cmd = std::process::Command::new("rundll32");
+        cmd.args(&["url.dll,FileProtocolHandler", &url]);
         cmd.creation_flags(CREATE_NO_WINDOW);
         cmd.spawn()
             .map_err(|e| format!("Failed to open URL: {}", e))?;

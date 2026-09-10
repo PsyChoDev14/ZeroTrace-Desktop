@@ -206,6 +206,7 @@ impl WindowsTunManager {
             }
         }
 
+        #[cfg(debug_assertions)]
         if let Ok(cwd) = std::env::current_dir() {
             candidates.push(cwd.join("binaries").join(binary_name));
             candidates.push(cwd.join("src-tauri").join("binaries").join(binary_name));
@@ -234,6 +235,7 @@ impl WindowsTunManager {
             }
         }
 
+        #[cfg(debug_assertions)]
         if let Ok(cwd) = std::env::current_dir() {
             candidates.push(cwd.join("binaries").join(dll_name));
             candidates.push(cwd.join("src-tauri").join("binaries").join(dll_name));
@@ -262,6 +264,7 @@ impl WindowsTunManager {
             }
         }
 
+        #[cfg(debug_assertions)]
         if let Ok(cwd) = std::env::current_dir() {
             candidates.push(cwd.join("binaries").join(dll_name));
             candidates.push(cwd.join("src-tauri").join("binaries").join(dll_name));

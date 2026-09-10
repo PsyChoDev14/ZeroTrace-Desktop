@@ -28,8 +28,11 @@ impl StorageManager {
 
     pub fn save_configs(&self, configs: &[ProxyConfig]) -> Result<(), String> {
         let path = self.data_dir.join("configs.json");
+        let temp_path = self.data_dir.join("configs.json.tmp");
         let content = serde_json::to_string_pretty(configs).map_err(|e| e.to_string())?;
-        fs::write(path, content).map_err(|e| e.to_string())
+        fs::write(&temp_path, content).map_err(|e| e.to_string())?;
+        let _ = fs::remove_file(&path); // Ensure clean replacement on Windows if rename doesn't overwrite
+        fs::rename(temp_path, path).map_err(|e| e.to_string())
     }
 
     // Selected config ID
@@ -60,7 +63,10 @@ impl StorageManager {
 
     pub fn save_settings(&self, settings: &AppSettings) -> Result<(), String> {
         let path = self.data_dir.join("settings.json");
+        let temp_path = self.data_dir.join("settings.json.tmp");
         let content = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-        fs::write(path, content).map_err(|e| e.to_string())
+        fs::write(&temp_path, content).map_err(|e| e.to_string())?;
+        let _ = fs::remove_file(&path);
+        fs::rename(temp_path, path).map_err(|e| e.to_string())
     }
 }
