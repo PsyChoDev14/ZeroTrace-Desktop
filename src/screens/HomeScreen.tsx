@@ -1,8 +1,8 @@
 import React from 'react';
-import { ArrowDown, ArrowUp, ChevronRight, Globe, Plus, ShieldCheck, Zap } from 'lucide-react';
+import { ChevronRight, Globe, Plus, ShieldCheck, Zap } from 'lucide-react';
 import { ProxyConfig, TrafficStats, VpnState } from '../types';
 import { ConnectionDial } from '../components/ConnectionDial';
-import { formatDuration, formatPing, formatSpeed } from '../utils/formatters';
+import { formatDuration, formatPing } from '../utils/formatters';
 
 interface HomeScreenProps {
   vpnState: VpnState;
@@ -91,21 +91,6 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
           </>
         )}
       </div>
-
-      {/* 3. Live Throughput Inline Pill (Only when connected) */}
-      {isConnected && (
-        <div className="flex items-center gap-4 mt-3 px-4 py-1.5 rounded-full bg-zt-surface border border-zt-border text-xs font-mono shadow-sm">
-          <div className="flex items-center gap-1.5 text-emerald-500">
-            <ArrowDown size={13} />
-            <span>{formatSpeed(trafficStats.downloadSpeed)}</span>
-          </div>
-          <div className="w-px h-3 bg-zt-border" />
-          <div className="flex items-center gap-1.5 text-zt-accent">
-            <ArrowUp size={13} />
-            <span>{formatSpeed(trafficStats.uploadSpeed)}</span>
-          </div>
-        </div>
-      )}
 
       {/* 4. Server Selector Pill (Grouped directly below dial & status) */}
       <div className="w-full max-w-[320px] mt-6">

@@ -1,22 +1,17 @@
 {
-  "version": "1.3.9",
-  "versionCode": 26,
+  "version": "1.4.0",
+  "versionCode": 27,
   "releaseDate": "2026-09-11",
   "changelog": [
-    "Security Hardening: Prevented Windows DLL & binary planting by enforcing strictly qualified installation directory lookups",
-    "Security Hardening: Eliminated command injection risks in URL handling with strict protocol whitelisting",
-    "Security Hardening: Integrated SHA-256 cryptographic checksum verification for all update packages",
-    "Encrypted DNS: Enabled DNS-over-HTTPS (DoH) remote resolution to prevent DNS tampering and ISP sniffing",
-    "Leak Protection: Enforced IPv6 kernel-level blocking to prevent traffic leaks on dual-stack networks",
-    "Reliability: Implemented atomic state file persistence to protect against unexpected shutdown corruption",
-    "UX Improvements: Fixed window minimize and tray closing behaviors to ensure seamless background operation"
+    "Clean & Minimal Interface: Removed real-time speed display from the Home Screen for a clean, distraction-free connection view",
+    "Performance Optimization: Reduced polling and UI rerenders during active connections"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.9/ZeroTrace_1.3.9_x64-setup.exe",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.0/ZeroTrace_1.4.0_x64-setup.exe",
     "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.3.9/ZeroTrace_1.3.9_aarch64.dmg",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.0/ZeroTrace_1.4.0_aarch64.dmg",
     "sha256": ""
   }
 }
