@@ -1,18 +1,17 @@
 {
-  "version": "1.4.1",
-  "versionCode": 28,
+  "version": "1.4.2",
+  "versionCode": 29,
   "releaseDate": "2026-09-13",
   "changelog": [
-    "Fixed First-Attempt Disconnect: Resolved cold-start TUN routing loops and process verification race conditions with internal auto-healing retry",
-    "Auto-Launch & Auto-Connect: Added Settings toggles to automatically launch ZeroTrace on system startup and automatically connect with the last used configuration on launch",
-    "Improved Process Health & Cleanup: Guaranteed unconditional pre-spawn cleanup of stale proxy processes and robust endpoint pre-resolution"
+    "Single-Instance Locking: Prevented duplicate instances from opening concurrently; secondary launches automatically bring the existing window to the front",
+    "Focus Restoration: Smoothly restores and unminimizes the active window even when minimized or hidden in the system tray"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.1/ZeroTrace_1.4.1_x64-setup.exe",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.2/ZeroTrace_1.4.2_x64-setup.exe",
     "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.1/ZeroTrace_1.4.1_aarch64.dmg",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.2/ZeroTrace_1.4.2_aarch64.dmg",
     "sha256": ""
   }
 }

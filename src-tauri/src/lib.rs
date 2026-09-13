@@ -21,6 +21,13 @@ use xray::XrayProcess;
 pub fn run() {
     let app_builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }))
         .setup(|app| {
             let app_handle = app.handle();
             let app_data_dir = app_handle.path().app_data_dir().unwrap_or_else(|_| {
