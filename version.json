@@ -1,17 +1,18 @@
 {
-  "version": "1.4.0",
-  "versionCode": 27,
-  "releaseDate": "2026-09-11",
+  "version": "1.4.1",
+  "versionCode": 28,
+  "releaseDate": "2026-09-13",
   "changelog": [
-    "Clean & Minimal Interface: Removed real-time speed display from the Home Screen for a clean, distraction-free connection view",
-    "Performance Optimization: Reduced polling and UI rerenders during active connections"
+    "Fixed First-Attempt Disconnect: Resolved cold-start TUN routing loops and process verification race conditions with internal auto-healing retry",
+    "Auto-Launch & Auto-Connect: Added Settings toggles to automatically launch ZeroTrace on system startup and automatically connect with the last used configuration on launch",
+    "Improved Process Health & Cleanup: Guaranteed unconditional pre-spawn cleanup of stale proxy processes and robust endpoint pre-resolution"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.0/ZeroTrace_1.4.0_x64-setup.exe",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.1/ZeroTrace_1.4.1_x64-setup.exe",
     "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.0/ZeroTrace_1.4.0_aarch64.dmg",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.4.1/ZeroTrace_1.4.1_aarch64.dmg",
     "sha256": ""
   }
 }

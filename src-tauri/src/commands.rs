@@ -87,6 +87,10 @@ pub fn get_state(state: State<SharedState>) -> VpnState {
 pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result<bool, String> {
     let (config, settings, app_dir) = {
         let mut ctx = state.lock();
+        if ctx.vpn_state.status == "connecting" || ctx.vpn_state.status == "connected" {
+            return Ok(true);
+        }
+
         let target_id = config_id.or_else(|| ctx.selected_id.clone());
         let cfg = ctx.configs.iter().find(|c| Some(&c.id) == target_id.as_ref()).cloned();
         
@@ -97,6 +101,10 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
                 return Err("No server configuration found to connect".to_string());
             }
         };
+
+        // Persist as selected / last connected config
+        ctx.selected_id = Some(config.id.clone());
+        let _ = ctx.storage.save_selected_id(Some(&config.id));
 
         ctx.vpn_state = VpnState {
             status: "connecting".to_string(),
@@ -113,20 +121,24 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
     };
 
     // Fast asynchronous pre-resolution of server endpoint to bypass ISP DNS throttling & per-dial delay
-    let resolved_ip = tokio::net::lookup_host(format!("{}:{}", config.server, config.port))
-        .await
-        .ok()
-        .and_then(|addrs| {
+    let mut resolved_ip = None;
+    for _ in 0..2 {
+        let lookup_fut = tokio::net::lookup_host(format!("{}:{}", config.server, config.port));
+        if let Ok(Ok(addrs)) = tokio::time::timeout(tokio::time::Duration::from_millis(1500), lookup_fut).await {
             let mut vec: Vec<_> = addrs.collect();
             vec.sort_by_key(|a| if a.is_ipv4() { 0 } else { 1 });
-            vec.into_iter().next()
-        })
-        .map(|addr| addr.ip().to_string());
+            if let Some(addr) = vec.into_iter().next() {
+                resolved_ip = Some(addr.ip().to_string());
+                break;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
 
     if let Some(ref ip) = resolved_ip {
         state.lock().add_log("INFO", "ZeroTrace", &format!("Pre-resolved endpoint {} -> {} (Fast Direct Dial)", config.server, ip));
     } else {
-        state.lock().add_log("WARN", "ZeroTrace", &format!("Could not pre-resolve {} via local DNS; falling back to Xray engine resolver", config.server));
+        state.lock().add_log("WARN", "ZeroTrace", &format!("Could not pre-resolve {} via local DNS; falling back to engine resolver", config.server));
     }
 
     #[cfg(windows)]
@@ -136,64 +148,83 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
             state_clone.lock().add_log(level, tag, msg);
         });
 
-        {
-            let mut ctx = state.lock();
-            if let Err(e) = ctx.tun_manager.start_tunnel(
-                &config,
-                &settings,
-                resolved_ip.as_deref(),
-                &app_dir,
-                Some(log_cb),
-            ) {
-                ctx.vpn_state = VpnState {
-                    status: "error".to_string(),
-                    server_name: None,
-                    server_address: None,
-                    connected_at: None,
-                    error_message: Some(e.clone()),
-                };
-                ctx.add_log("ERROR", "SingBox-Core", &format!("Failed to activate tunnel: {}", e));
-                return Err(e);
+        let mut last_err = String::new();
+        let mut started_ok = false;
+
+        for attempt in 1..=2 {
+            if attempt > 1 {
+                state.lock().add_log("WARN", "ZeroTrace", "Initial core launch settling; performing automatic auto-heal retry...");
+                tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
             }
 
-            let now = chrono::Utc::now().timestamp_millis();
-            ctx.vpn_state = VpnState {
-                status: "connected".to_string(),
-                server_name: Some(config.name.clone()),
-                server_address: Some(format!("{}:{}", config.server, config.port)),
-                connected_at: Some(now),
-                error_message: None,
+            let start_res = {
+                let mut ctx = state.lock();
+                ctx.tun_manager.start_tunnel(
+                    &config,
+                    &settings,
+                    resolved_ip.as_deref(),
+                    &app_dir,
+                    Some(log_cb.clone()),
+                )
             };
-            ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
-        }
 
-        // Verify Sing-box process actually started and didn't crash
-        tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
-        {
-            let mut ctx = state.lock();
-            if !tunnel_process_alive(&mut *ctx) {
+            if let Err(e) = start_res {
+                last_err = e;
+                continue;
+            }
+
+            // Verify Sing-box process actually started and stayed alive
+            tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+
+            let is_alive = {
+                let mut ctx = state.lock();
+                tunnel_process_alive(&mut *ctx)
+            };
+
+            if is_alive {
+                started_ok = true;
+                break;
+            } else {
+                let mut ctx = state.lock();
                 ctx.tun_manager.stop_tunnel();
                 let is_access_denied = ctx.logs.iter().rev().take(15).any(|l| {
                     l.message.contains("Access is denied")
                         || l.message.contains("access is denied")
                         || l.message.contains("configure tun interface")
                 });
-                let err_msg = if is_access_denied {
+                last_err = if is_access_denied {
                     "Administrator privileges required to configure Wintun TUN interface. Please right-click ZeroTrace and select 'Run as Administrator'.".to_string()
                 } else {
                     "Sing-box core exited immediately upon launch. Direct connection restored.".to_string()
                 };
-                ctx.vpn_state = VpnState {
-                    status: "disconnected".to_string(),
-                    server_name: None,
-                    server_address: None,
-                    connected_at: None,
-                    error_message: Some(err_msg.clone()),
-                };
-                ctx.add_log("ERROR", "ZeroTrace", &err_msg);
-                return Err(err_msg);
             }
         }
+
+        if !started_ok {
+            let mut ctx = state.lock();
+            ctx.tun_manager.stop_tunnel();
+            ctx.vpn_state = VpnState {
+                status: "disconnected".to_string(),
+                server_name: None,
+                server_address: None,
+                connected_at: None,
+                error_message: Some(last_err.clone()),
+            };
+            ctx.add_log("ERROR", "ZeroTrace", &last_err);
+            return Err(last_err);
+        }
+
+        // Transition to "connected" ONLY AFTER confirmation that the core is healthy
+        let now = chrono::Utc::now().timestamp_millis();
+        let mut ctx = state.lock();
+        ctx.vpn_state = VpnState {
+            status: "connected".to_string(),
+            server_name: Some(config.name.clone()),
+            server_address: Some(format!("{}:{}", config.server, config.port)),
+            connected_at: Some(now),
+            error_message: None,
+        };
+        ctx.add_log("INFO", "SingBox-Core", "Sing-box Kernel Wintun Layer 3 TUN active. Whole-device gigabit routing enabled.");
         return Ok(true);
     }
 
@@ -208,81 +239,97 @@ pub async fn do_connect(config_id: Option<String>, state: SharedState) -> Result
             resolved_ip.as_deref(),
         );
 
-        // 2. Start Xray-Core engine with real-time log streaming
-        {
-            let state_clone = state.clone();
-            let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
-                state_clone.lock().add_log(level, tag, msg);
-            });
+        let state_clone = state.clone();
+        let log_cb = Arc::new(move |level: &str, tag: &str, msg: &str| {
+            state_clone.lock().add_log(level, tag, msg);
+        });
 
-            let mut ctx = state.lock();
-            if let Err(e) = ctx.xray_process.start(&xray_json, &app_dir, Some(log_cb)) {
-                ctx.vpn_state = VpnState {
-                    status: "error".to_string(),
-                    server_name: None,
-                    server_address: None,
-                    connected_at: None,
-                    error_message: Some(e.clone()),
-                };
-                ctx.add_log("ERROR", "Xray-Core", &format!("Failed to start engine: {}", e));
-                return Err(e);
-            }
-            ctx.add_log("INFO", "Xray-Core", "Xray runtime engine spawned on 127.0.0.1:10808 (SOCKS5)");
-        }
+        let mut last_err = String::new();
+        let mut started_ok = false;
 
-        // 3. Configure macOS system proxy
-        {
-            let mut ctx = state.lock();
-            if let Err(e) = ctx.tun_manager.start_tunnel(
-                &config,
-                &settings,
-                resolved_ip.as_deref(),
-                &app_dir,
-                None,
-            ) {
-                ctx.xray_process.stop();
-                ctx.vpn_state = VpnState {
-                    status: "error".to_string(),
-                    server_name: None,
-                    server_address: None,
-                    connected_at: None,
-                    error_message: Some(e.clone()),
-                };
-                ctx.add_log("ERROR", "TunManager", &format!("Failed to activate tunnel: {}", e));
-                return Err(e);
+        for attempt in 1..=2 {
+            if attempt > 1 {
+                state.lock().add_log("WARN", "ZeroTrace", "Initial core launch settling; performing automatic auto-heal retry...");
+                tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
             }
 
-            let now = chrono::Utc::now().timestamp_millis();
-            ctx.vpn_state = VpnState {
-                status: "connected".to_string(),
-                server_name: Some(config.name.clone()),
-                server_address: Some(format!("{}:{}", config.server, config.port)),
-                connected_at: Some(now),
-                error_message: None,
+            // 2. Start Xray-Core engine with real-time log streaming
+            let start_xray_res = {
+                let mut ctx = state.lock();
+                ctx.xray_process.start(&xray_json, &app_dir, Some(log_cb.clone()))
             };
-            ctx.add_log("INFO", "TunManager", "macOS high-speed system proxy active. Traffic routed via Xray tunnel.");
-        }
 
-        // 4. Verify Xray process actually started and didn't crash during launch
-        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
-        {
-            let mut ctx = state.lock();
-            if !tunnel_process_alive(&mut *ctx) {
+            if let Err(e) = start_xray_res {
+                last_err = e;
+                continue;
+            }
+            state.lock().add_log("INFO", "Xray-Core", "Xray runtime engine spawned on 127.0.0.1:10808 (SOCKS5)");
+
+            // 3. Configure macOS system proxy
+            let start_proxy_res = {
+                let mut ctx = state.lock();
+                ctx.tun_manager.start_tunnel(
+                    &config,
+                    &settings,
+                    resolved_ip.as_deref(),
+                    &app_dir,
+                    None,
+                )
+            };
+
+            if let Err(e) = start_proxy_res {
+                let mut ctx = state.lock();
+                ctx.xray_process.stop();
+                last_err = e;
+                continue;
+            }
+
+            // 4. Verify Xray process actually started and didn't crash during launch
+            tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+            let is_alive = {
+                let mut ctx = state.lock();
+                tunnel_process_alive(&mut *ctx)
+            };
+
+            if is_alive {
+                started_ok = true;
+                break;
+            } else {
+                let mut ctx = state.lock();
                 ctx.tun_manager.stop_tunnel();
                 ctx.xray_process.stop();
-                ctx.vpn_state = VpnState {
-                    status: "disconnected".to_string(),
-                    server_name: None,
-                    server_address: None,
-                    connected_at: None,
-                    error_message: Some("Xray core exited immediately upon launch. Direct connection restored.".to_string()),
-                };
-                ctx.add_log("ERROR", "ZeroTrace", "Xray core exited immediately upon launch; direct connection restored.");
-                return Err("Xray core failed to stay running".to_string());
+                last_err = "Xray core exited immediately upon launch. Direct connection restored.".to_string();
             }
         }
 
-        Ok(true)
+        if !started_ok {
+            let mut ctx = state.lock();
+            ctx.tun_manager.stop_tunnel();
+            ctx.xray_process.stop();
+            ctx.vpn_state = VpnState {
+                status: "disconnected".to_string(),
+                server_name: None,
+                server_address: None,
+                connected_at: None,
+                error_message: Some(last_err.clone()),
+            };
+            ctx.add_log("ERROR", "ZeroTrace", &last_err);
+            return Err(last_err);
+        }
+
+        // Transition to "connected" ONLY AFTER confirmation that the core is healthy
+        let now = chrono::Utc::now().timestamp_millis();
+        let mut ctx = state.lock();
+        ctx.vpn_state = VpnState {
+            status: "connected".to_string(),
+            server_name: Some(config.name.clone()),
+            server_address: Some(format!("{}:{}", config.server, config.port)),
+            connected_at: Some(now),
+            error_message: None,
+        };
+        ctx.add_log("INFO", "TunManager", "macOS high-speed system proxy active. Traffic routed via Xray tunnel.");
+        return Ok(true);
     }
 }
 
@@ -441,7 +488,9 @@ pub fn parse_config(raw: String) -> Option<ProxyConfig> {
 
 #[tauri::command]
 pub fn get_settings(state: State<SharedState>) -> AppSettings {
-    state.lock().settings.clone()
+    let mut ctx = state.lock();
+    ctx.settings.launch_at_startup = crate::autostart::is_autostart_enabled();
+    ctx.settings.clone()
 }
 
 #[tauri::command]
@@ -452,6 +501,23 @@ pub fn save_settings(mut settings: AppSettings, state: State<SharedState>) -> bo
     }
     settings.sri_lanka_sni_tweak = settings.sri_lanka_sni_tweak.trim().to_string();
     let mut ctx = state.lock();
+
+    // Check if autostart setting has changed
+    if ctx.settings.launch_at_startup != settings.launch_at_startup {
+        if let Err(e) = crate::autostart::set_autostart(settings.launch_at_startup) {
+            ctx.add_log("WARN", "ZeroTrace", &format!("Failed to configure autostart: {}", e));
+        } else {
+            ctx.add_log(
+                "INFO",
+                "ZeroTrace",
+                &format!(
+                    "System autostart {}",
+                    if settings.launch_at_startup { "enabled" } else { "disabled" }
+                ),
+            );
+        }
+    }
+
     ctx.settings = settings.clone();
     let _ = ctx.storage.save_settings(&settings);
     true

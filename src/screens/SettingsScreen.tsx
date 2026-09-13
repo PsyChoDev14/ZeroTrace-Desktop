@@ -159,7 +159,65 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       </div>
 
-      {/* Group 1: DNS & Anti-Censorship */}
+      {/* Group 1: Startup & Automation */}
+      <div>
+        <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
+          Startup & Automation
+        </span>
+        <div className="rounded-2xl bg-zt-surface border border-zt-border overflow-hidden divide-y divide-zt-border text-xs shadow-sm">
+          {/* Launch on System Startup */}
+          <div className="p-3 flex items-center justify-between gap-3">
+            <div className="flex flex-col pr-2">
+              <span className="font-medium text-zt-text">Launch on System Startup</span>
+              <span className="text-[11px] text-zt-text-muted mt-0.5">
+                Automatically open ZeroTrace when your computer boots up
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(current.launchAtStartup)}
+              onClick={() => updateSetting('launchAtStartup', !current.launchAtStartup)}
+              className={`w-11 h-6 rounded-full transition-colors duration-200 relative cursor-pointer outline-none shrink-0 ${
+                current.launchAtStartup ? 'bg-zt-accent' : 'bg-zt-border-strong'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out absolute top-1 left-1 ${
+                  current.launchAtStartup ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Auto-Connect on Launch */}
+          <div className="p-3 flex items-center justify-between gap-3">
+            <div className="flex flex-col pr-2">
+              <span className="font-medium text-zt-text">Auto-Connect on Launch</span>
+              <span className="text-[11px] text-zt-text-muted mt-0.5">
+                Start VPN automatically using the last connected configuration
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(current.autoConnect)}
+              onClick={() => updateSetting('autoConnect', !current.autoConnect)}
+              className={`w-11 h-6 rounded-full transition-colors duration-200 relative cursor-pointer outline-none shrink-0 ${
+                current.autoConnect ? 'bg-zt-accent' : 'bg-zt-border-strong'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out absolute top-1 left-1 ${
+                  current.autoConnect ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Group 2: DNS & Anti-Censorship */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
           Network & DNS

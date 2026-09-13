@@ -81,7 +81,8 @@ impl StubTunManager {
     }
 
     pub fn cleanup_stale_proxies() {
-        println!("[StubTunManager] Resetting macOS system proxies across all interfaces...");
+        println!("[StubTunManager] Resetting macOS system proxies across all interfaces and cleaning stale xray processes...");
+        let _ = Command::new("pkill").args(&["-9", "-x", "xray"]).output();
         if let Ok(output) = Command::new("networksetup").args(&["-listallnetworkservices"]).output() {
             let text = String::from_utf8_lossy(&output.stdout);
             for line in text.lines() {

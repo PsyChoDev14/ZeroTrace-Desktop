@@ -20,6 +20,7 @@ let mockSettings: AppSettings = {
   fragmentInterval: '10-20',
   killSwitch: true,
   autoConnect: false,
+  launchAtStartup: false,
   minimizeToTray: true,
   theme: 'dark',
 };

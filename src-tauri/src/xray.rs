@@ -535,10 +535,11 @@ impl XrayProcess {
         let found_binary = candidate_paths.iter().find(|p| p.exists() && p.is_file()).cloned();
         let binary_to_run = found_binary.unwrap_or_else(|| PathBuf::from(binary_name));
 
-        println!("[XrayProcess] Starting Xray core from: {:?}", binary_to_run);
-
         let mut cmd = Command::new(&binary_to_run);
         cmd.arg("run").arg("-config").arg(&config_path);
+        if let Some(parent) = binary_to_run.parent() {
+            cmd.current_dir(parent);
+        }
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
 
@@ -662,6 +663,7 @@ mod tests {
             fragment_interval: "10-20".to_string(),
             kill_switch: true,
             auto_connect: false,
+            launch_at_startup: false,
             minimize_to_tray: true,
             theme: "dark".to_string(),
         };

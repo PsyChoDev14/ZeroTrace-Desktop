@@ -206,10 +206,14 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
       {/* 3. Obsidian Glass Core Button */}
       <button
         onClick={onClick}
-        disabled={disabled}
+        disabled={disabled || isConnecting}
         aria-label={isConnected ? 'Disconnect' : isConnecting ? 'Connecting…' : isError ? 'Reconnect' : 'Connect'}
-        className={`relative z-10 w-40 h-40 rounded-full flex flex-col items-center justify-center transition-all duration-300 group cursor-pointer focus:outline-none ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 hover:scale-[1.02]'
+        className={`relative z-10 w-40 h-40 rounded-full flex flex-col items-center justify-center transition-all duration-300 group focus:outline-none ${
+          disabled && !isConnecting
+            ? 'opacity-50 cursor-not-allowed'
+            : isConnecting
+            ? 'cursor-wait'
+            : 'cursor-pointer active:scale-95 hover:scale-[1.02]'
         }`}
         style={{
           background: coreBg,

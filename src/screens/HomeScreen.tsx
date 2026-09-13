@@ -42,6 +42,7 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
         state={vpnState}
         hasConfig={selectedConfig !== null}
         onClick={onToggleConnect}
+        disabled={isConnecting}
         isLightMode={isLightMode}
       />
 

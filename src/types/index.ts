@@ -58,6 +58,7 @@ export interface AppSettings {
   fragmentInterval: string;
   killSwitch?: boolean;
   autoConnect: boolean;
+  launchAtStartup?: boolean;
   minimizeToTray: boolean;
   theme?: 'dark' | 'light' | 'system';
 }

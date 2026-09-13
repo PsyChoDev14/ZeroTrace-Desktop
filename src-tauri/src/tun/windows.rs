@@ -30,6 +30,7 @@ impl WindowsTunManager {
         log_fn: Option<Arc<dyn Fn(&str, &str, &str) + Send + Sync + 'static>>,
     ) -> Result<(), String> {
         self.stop_tunnel();
+        Self::cleanup_stale_proxies();
 
         println!("[WindowsTunManager] Initializing Sing-box Native Kernel Wintun Tunnel...");
 
@@ -51,8 +52,10 @@ impl WindowsTunManager {
 
         println!("[WindowsTunManager] Found sing-box at {:?}", singbox_bin);
 
+        let parent_dir = singbox_bin.parent().map(|p| p.to_path_buf());
+
         // Ensure wintun.dll and libcronet.dll are next to sing-box.exe
-        if let Some(parent) = singbox_bin.parent() {
+        if let Some(ref parent) = parent_dir {
             let wintun_dst = parent.join("wintun.dll");
             if !wintun_dst.exists() {
                 if let Some(wintun_src) = Self::find_wintun_dll() {
@@ -70,6 +73,9 @@ impl WindowsTunManager {
         // 3. Spawn sing-box.exe run -c <config_path>
         let mut cmd = Command::new(&singbox_bin);
         cmd.arg("run").arg("-c").arg(&config_path);
+        if let Some(ref parent) = parent_dir {
+            cmd.current_dir(parent);
+        }
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
 
@@ -136,22 +142,21 @@ impl WindowsTunManager {
     }
 
     pub fn stop_tunnel(&mut self) {
-        if self.is_active.swap(false, Ordering::SeqCst) {
-            println!("[WindowsTunManager] Stopping Sing-box tunnel and restoring default routes...");
+        self.is_active.store(false, Ordering::SeqCst);
+        println!("[WindowsTunManager] Stopping Sing-box tunnel and restoring default routes...");
 
-            if let Some(mut child) = self.singbox_child.take() {
-                let _ = child.kill();
-                let _ = child.wait();
-            }
-
-            if let Some(path) = self.config_file_path.take() {
-                let _ = std::fs::remove_file(path);
-            }
-
-            // Reset Windows system proxy
-            let _ = Self::set_windows_proxy(false);
-            println!("[WindowsTunManager] Direct network restored. Shield offline.");
+        if let Some(mut child) = self.singbox_child.take() {
+            let _ = child.kill();
+            let _ = child.wait();
         }
+
+        if let Some(path) = self.config_file_path.take() {
+            let _ = std::fs::remove_file(path);
+        }
+
+        // Reset Windows system proxy
+        let _ = Self::set_windows_proxy(false);
+        println!("[WindowsTunManager] Direct network restored. Shield offline.");
     }
 
     pub fn is_active(&self) -> bool {
@@ -182,8 +187,9 @@ impl WindowsTunManager {
     }
 
     pub fn cleanup_stale_proxies() {
-        println!("[WindowsTunManager] Checking and cleaning stale Sing-box processes and proxy on startup...");
+        println!("[WindowsTunManager] Checking and cleaning stale tunnel processes and proxy...");
         let _ = Self::silent_command("taskkill").args(&["/F", "/IM", "sing-box.exe"]).output();
+        let _ = Self::silent_command("taskkill").args(&["/F", "/IM", "xray.exe"]).output();
         let _ = Self::silent_command("taskkill").args(&["/F", "/IM", "tun2socks.exe"]).output();
         let _ = Self::set_windows_proxy(false);
     }

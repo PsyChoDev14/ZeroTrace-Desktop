@@ -116,6 +116,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub kill_switch: bool,
     pub auto_connect: bool,
+    #[serde(default)]
+    pub launch_at_startup: bool,
     pub minimize_to_tray: bool,
     #[serde(default = "default_theme")]
     pub theme: String,
@@ -137,6 +139,7 @@ impl Default for AppSettings {
             fragment_interval: "10-20".to_string(),
             kill_switch: false,
             auto_connect: false,
+            launch_at_startup: false,
             minimize_to_tray: true,
             theme: "dark".to_string(),
         }

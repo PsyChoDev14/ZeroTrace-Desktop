@@ -133,7 +133,18 @@ impl SingboxConfigGenerator {
             }));
         }
 
-        // Bypass remote server IP direct to gateway
+        // Bypass remote server domain and IP direct to gateway (prevents routing loops under TUN auto-route)
+        if !config.server.is_empty() {
+            route_rules.push(json!({
+                "domain": [config.server.as_str()],
+                "outbound": "direct"
+            }));
+            route_rules.push(json!({
+                "domain_suffix": [config.server.as_str()],
+                "outbound": "direct"
+            }));
+        }
+
         if let Some(ip) = resolved_server_ip {
             route_rules.push(json!({
                 "ip_cidr": [format!("{}/32", ip)],
@@ -397,6 +408,7 @@ mod tests {
             fragment_interval: "".to_string(),
             kill_switch: true,
             auto_connect: false,
+            launch_at_startup: false,
             minimize_to_tray: true,
             theme: "dark".to_string(),
         };
@@ -477,6 +489,7 @@ mod tests {
             fragment_interval: "".to_string(),
             kill_switch: true,
             auto_connect: false,
+            launch_at_startup: false,
             minimize_to_tray: true,
             theme: "dark".to_string(),
         };
@@ -492,6 +505,20 @@ mod tests {
         assert_eq!(outbounds[0]["type"], "vless");
         assert_eq!(outbounds[0]["tls"]["server_name"], "api.zoom.us");
         assert_eq!(outbounds[0]["tls"]["insecure"], true);
+
+        // Verify routing rules include domain and IP direct bypass to prevent routing loops
+        let rules = root["route"]["rules"].as_array().expect("rules");
+        let has_domain_bypass = rules.iter().any(|r| {
+            r.get("domain").and_then(|d| d.as_array()).map_or(false, |arr| arr.iter().any(|v| v == "node1.novalink.lk"))
+                && r.get("outbound").and_then(|o| o.as_str()) == Some("direct")
+        });
+        assert!(has_domain_bypass, "Must include direct domain bypass for node1.novalink.lk");
+
+        let has_ip_bypass = rules.iter().any(|r| {
+            r.get("ip_cidr").and_then(|d| d.as_array()).map_or(false, |arr| arr.iter().any(|v| v == "172.104.47.65/32"))
+                && r.get("outbound").and_then(|o| o.as_str()) == Some("direct")
+        });
+        assert!(has_ip_bypass, "Must include direct IP CIDR bypass for pre-resolved IP");
     }
 
     #[test]

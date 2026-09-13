@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { Navigation, NavTab } from './components/Navigation';
 import { HomeScreen } from './screens/HomeScreen';
@@ -39,6 +39,7 @@ export function App() {
     fragmentInterval: '10-20',
     killSwitch: true,
     autoConnect: false,
+    launchAtStartup: false,
     minimizeToTray: true,
     theme: 'dark',
   });
@@ -50,6 +51,9 @@ export function App() {
   const [sharingConfig, setSharingConfig] = useState<ProxyConfig | null>(null);
   const [isPingingAll, setIsPingingAll] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateInfo | null>(null);
+
+  // Startup auto-connect guard
+  const autoConnectFiredRef = useRef(false);
 
   // Check for updates on startup (silent check after 2.5s)
   useEffect(() => {
@@ -103,6 +107,22 @@ export function App() {
         if (loadedState) setVpnState(loadedState);
         if (loadedSettings) setSettings(loadedSettings);
         if (loadedLogs) setLogs(loadedLogs);
+
+        // Auto-connect on startup with last connected config if enabled in settings
+        if (loadedSettings?.autoConnect && !autoConnectFiredRef.current) {
+          autoConnectFiredRef.current = true;
+          if (loadedState?.status === 'disconnected') {
+            const targetId = loadedSelectedId || (loadedConfigs && loadedConfigs.length > 0 ? loadedConfigs[0].id : null);
+            if (targetId) {
+              console.log('[AutoConnect] Auto-connecting to last active configuration:', targetId);
+              setTimeout(() => {
+                api.connect(targetId).catch(err => {
+                  console.error('[AutoConnect] Auto-connection on launch failed:', err);
+                });
+              }, 400);
+            }
+          }
+        }
       } catch (err) {
         console.error('Failed to load initial data:', err);
       }
@@ -190,8 +210,14 @@ export function App() {
 
   const selectedConfig = configs.find(c => c.id === selectedId) || null;
 
+  const isConnectingRef = useRef(false);
+
   const handleToggleConnect = useCallback(async () => {
-    if (vpnState.status === 'connected' || vpnState.status === 'connecting') {
+    if (isConnectingRef.current || vpnState.status === 'stopping') {
+      return;
+    }
+
+    if (vpnState.status === 'connected') {
       // Optimistic instant response: immediate stopping state & reset throughput
       setVpnState({ status: 'stopping' });
       setTrafficStats(prev => ({
@@ -220,9 +246,11 @@ export function App() {
       });
       api.getLogs().then(l => l && setLogs(l));
     } else {
+      isConnectingRef.current = true;
       setVpnState({ status: 'connecting', errorMessage: undefined });
       try {
         if (!selectedId && configs.length > 0) {
+          setSelectedId(configs[0].id);
           await api.connect(configs[0].id);
         } else if (selectedId) {
           await api.connect(selectedId);
@@ -237,6 +265,8 @@ export function App() {
           errorMessage: err instanceof Error ? err.message : String(err),
         });
       } finally {
+        isConnectingRef.current = false;
+        api.getState().then(s => s && setVpnState(s));
         api.getLogs().then(l => l && setLogs(l));
       }
     }

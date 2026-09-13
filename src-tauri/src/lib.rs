@@ -1,3 +1,4 @@
+pub mod autostart;
 pub mod commands;
 pub mod models;
 pub mod parser;
@@ -47,9 +48,9 @@ pub fn run() {
                     connected_at: None,
                     error_message: None,
                 },
-                configs,
-                selected_id,
-                settings,
+                configs: configs.clone(),
+                selected_id: selected_id.clone(),
+                settings: settings.clone(),
                 traffic_stats: TrafficStats::default(),
                 last_stats_poll: None,
                 last_octets: None,
@@ -67,7 +68,19 @@ pub fn run() {
             };
 
             let shared_state: SharedState = Arc::new(Mutex::new(initial_context));
-            app.manage(shared_state);
+            app.manage(shared_state.clone());
+
+            // Auto-connect on startup with last connected config if enabled
+            if settings.auto_connect {
+                let target_id = selected_id.clone().or_else(|| configs.first().map(|c| c.id.clone()));
+                if let Some(cfg_id) = target_id {
+                    let state_clone = shared_state.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+                        let _ = do_connect(Some(cfg_id), state_clone).await;
+                    });
+                }
+            }
 
             // Setup System Tray / Menu Bar Status Icon
             use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent};
