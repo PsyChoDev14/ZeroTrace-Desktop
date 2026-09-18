@@ -6,13 +6,27 @@ import { ConfigsScreen } from './screens/ConfigsScreen';
 import { StatisticsScreen } from './screens/StatisticsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LogsScreen } from './screens/LogsScreen';
+import { AccountScreen } from './screens/AccountScreen';
+import { LoginScreen } from './screens/LoginScreen';
 import { AddConfigModal } from './components/AddConfigModal';
 import { EditConfigModal } from './components/EditConfigModal';
 import { ShareModal } from './components/ShareModal';
 import { UpdateModal } from './components/UpdateModal';
-import { AppSettings, DiagnosticLog, ProxyConfig, TrafficStats, VpnState } from './types';
-import { api } from './utils/tauriBridge';
+import { AppSettings, DiagnosticLog, ProxyConfig, SubscriptionInfo, TrafficStats, UserProfile, VpnState } from './types';
+import { api, isTauri } from './utils/tauriBridge';
 import { checkForAppUpdate, AppUpdateInfo } from './utils/updater';
+import {
+  PendingLogin,
+  SessionExpiredError,
+  completeLogin,
+  fetchSubscriptions,
+  fetchUserProfile,
+  hasStoredSession,
+  logout as authLogout,
+  startLogin,
+} from './utils/authApi';
+
+const OFFLINE_KEY = 'zt.offlineChoice';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -44,6 +58,18 @@ export function App() {
     theme: 'dark',
   });
   const [logs, setLogs] = useState<DiagnosticLog[]>([]);
+
+  // Account / OAuth login state
+  const [account, setAccount] = useState<UserProfile | null>(null);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionInfo[]>([]);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const pendingLoginRef = useRef<PendingLogin | null>(null);
+  // null until the keychain has been checked, so the login page doesn't flash for signed-in users.
+  const [sessionPresent, setSessionPresent] = useState<boolean | null>(null);
+  const [offlineChoice, setOfflineChoice] = useState<boolean>(() => {
+    try { return localStorage.getItem(OFFLINE_KEY) === '1'; } catch { return false; }
+  });
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -324,14 +350,192 @@ export function App() {
     });
   }, []);
 
+  // Fetches the account profile + subscriptions, and upserts synced subscriptions into
+  // the existing configs list (matched by subscriptionId so re-syncing updates in place
+  // instead of duplicating). Manually-added configs are never touched by this.
+  const refreshAccount = useCallback(async () => {
+    setAccountLoading(true);
+    setAccountError(null);
+    try {
+      // Read the canonical config list straight from storage (not React state) so a sync
+      // that races the startup config load still matches existing synced entries correctly.
+      const [profile, subs, currentConfigs] = await Promise.all([
+        fetchUserProfile(),
+        fetchSubscriptions(),
+        api.getConfigs(),
+      ]);
+      setAccount(profile);
+      setSessionPresent(true);
+      setSubscriptions(subs);
+
+      // Only active subscriptions become server configs.
+      const activeSubs = subs.filter(s => !s.expiry.isExpired && s.status.toLowerCase() !== 'expired');
+      const activeIds = new Set(activeSubs.map(s => s.id));
+
+      // Make the synced set exactly match this account's active subscriptions: drops another
+      // account's configs, expired plans, and cancelled plans. Manual configs (no subscriptionId)
+      // are never touched, and sign-out doesn't run this, so signing out leaves configs in place.
+      for (const cfg of currentConfigs || []) {
+        if (cfg.subscriptionId != null && !activeIds.has(cfg.subscriptionId)) {
+          await api.deleteConfig(cfg.id);
+        }
+      }
+
+      for (const sub of activeSubs) {
+        const parsed = await api.parseConfig(sub.configUrl);
+        if (!parsed) continue;
+        const existing = (currentConfigs || []).find(c => c.subscriptionId === sub.id);
+        await api.saveConfig({
+          ...parsed,
+          id: existing?.id ?? parsed.id,
+          name: sub.packageName || parsed.name,
+          pingMs: existing?.pingMs ?? parsed.pingMs,
+          subscriptionId: sub.id,
+        });
+      }
+      const [freshConfigs, freshSelectedId] = await Promise.all([api.getConfigs(), api.getSelectedConfigId()]);
+      if (freshConfigs) setConfigs(freshConfigs);
+      setSelectedId(freshSelectedId ?? null);
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        setAccount(null);
+        setSubscriptions([]);
+        setSessionPresent(false);
+        setAccountError(err.message);
+      } else {
+        setAccountError(err instanceof Error ? err.message : 'Failed to load account');
+      }
+    } finally {
+      setAccountLoading(false);
+    }
+  }, []);
+
+  const handleLogin = useCallback(async () => {
+    setAccountError(null);
+    setAccountLoading(true);
+    try {
+      pendingLoginRef.current = await startLogin();
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : 'Could not open sign-in page');
+      setAccountLoading(false);
+    }
+  }, []);
+
+  const handleCancelLogin = useCallback(() => {
+    pendingLoginRef.current = null;
+    setAccountLoading(false);
+    setAccountError(null);
+  }, []);
+
+  const handleContinueOffline = useCallback(() => {
+    try { localStorage.setItem(OFFLINE_KEY, '1'); } catch { /* preference just won't persist */ }
+    setOfflineChoice(true);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await authLogout();
+    setAccount(null);
+    setSubscriptions([]);
+    setSessionPresent(false);
+    // Signing out lands back in the app with its configs, not on the login page.
+    handleContinueOffline();
+  }, [handleContinueOffline]);
+
+  // Completes the PKCE flow once the OS hands back the netchvpn://auth/callback deep link.
+  const handleDeepLinkUrls = useCallback(async (urls: string[]) => {
+    const raw = urls[0];
+    if (!raw) return;
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      return;
+    }
+    if (parsed.protocol !== 'netchvpn:') return;
+
+    const code = parsed.searchParams.get('code');
+    const state = parsed.searchParams.get('state');
+    const pending = pendingLoginRef.current;
+    if (!code || !state || !pending || state !== pending.state) {
+      console.error('[Auth] Ignoring deep link callback: missing or mismatched state');
+      setAccountError('Sign-in failed — please try again.');
+      setAccountLoading(false);
+      return;
+    }
+    pendingLoginRef.current = null;
+    try {
+      await completeLogin(code, pending.verifier);
+      setSessionPresent(true);
+      await refreshAccount();
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : 'Sign-in failed');
+      setAccountLoading(false);
+    }
+  }, [refreshAccount]);
+
+  // Global deep-link listener (works regardless of which tab is active) + resume any
+  // already-signed-in session on startup.
+  useEffect(() => {
+    hasStoredSession().then(has => {
+      setSessionPresent(has);
+      if (has) refreshAccount();
+    }).catch(() => setSessionPresent(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlisten: (() => void) | undefined;
+
+    import('@tauri-apps/plugin-deep-link').then(({ onOpenUrl, getCurrent }) => {
+      getCurrent().then(urls => {
+        if (urls && urls.length > 0) handleDeepLinkUrls(urls);
+      }).catch(() => {});
+
+      onOpenUrl(handleDeepLinkUrls).then(fn => {
+        unlisten = fn;
+      }).catch(err => {
+        console.warn('[Auth] Could not bind deep link listener:', err);
+      });
+    });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [handleDeepLinkUrls]);
+
+  // Launch gate: shown until signed in or the user picks "Use this device offline".
+  const showLoginGate = sessionPresent === false && !account && !offlineChoice;
+
   return (
     <div className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans theme-animated ${isLightMode ? 'theme-light' : ''}`}>
       {/* 1. Frameless Window Titlebar */}
       <TitleBar
         isConnected={vpnState.status === 'connected'}
         onOpenLogs={handleOpenLogs}
+        onOpenAccount={showLoginGate ? undefined : () => {
+          setPreviousTab(currentTab);
+          setCurrentTab('account');
+        }}
+        accountActive={currentTab === 'account'}
+        accountName={account?.name}
+        avatarUrl={account?.avatarUrl}
       />
 
+      {showLoginGate ? (
+        <main className="flex-1 flex flex-col overflow-hidden relative">
+          <LoginScreen
+            isLightMode={isLightMode}
+            loading={accountLoading}
+            error={accountError}
+            onLogin={handleLogin}
+            onCancel={handleCancelLogin}
+            onOffline={handleContinueOffline}
+            showFooter
+          />
+        </main>
+      ) : (
+      <>
       {/* 2. Main Viewport */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <div key={currentTab} className="flex-1 flex flex-col overflow-hidden animate-screen-enter">
@@ -387,6 +591,20 @@ export function App() {
               onBack={() => setCurrentTab(previousTab)}
             />
           )}
+
+          {currentTab === 'account' && (
+            <AccountScreen
+              account={account}
+              subscriptions={subscriptions}
+              loading={accountLoading}
+              error={accountError}
+              isLightMode={isLightMode}
+              onLogin={handleLogin}
+              onCancel={handleCancelLogin}
+              onLogout={handleLogout}
+              onRefresh={refreshAccount}
+            />
+          )}
         </div>
       </main>
 
@@ -400,6 +618,8 @@ export function App() {
         serverCount={configs.length}
         onOpenAddModal={() => setIsAddOpen(true)}
       />
+      </>
+      )}
 
       {/* Modals */}
       <AddConfigModal

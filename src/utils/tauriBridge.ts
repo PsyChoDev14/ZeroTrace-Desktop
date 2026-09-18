@@ -1,4 +1,4 @@
-import { AppSettings, DiagnosticLog, ProxyConfig, TrafficStats, VpnState } from '../types';
+import { AppSettings, DiagnosticLog, ProxyConfig, SubscriptionInfo, TrafficStats, UserProfile, VpnState } from '../types';
 
 // Check if running inside Tauri webview
 export const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -24,6 +24,9 @@ let mockSettings: AppSettings = {
   minimizeToTray: true,
   theme: 'dark',
 };
+
+// Fallback in-memory account state for web browser testing/preview (real builds keep this in Rust/keyring)
+let mockLoggedIn = false;
 
 let mockLogs: DiagnosticLog[] = [
   { timestamp: new Date().toISOString(), level: 'INFO', tag: 'ZeroTrace-Core', message: 'Engine initialized successfully.' },
@@ -130,6 +133,26 @@ async function mockInvoke(cmd: string, args: Record<string, unknown>): Promise<u
     case 'export_diagnostic_report': {
       return `=== ZeroTrace Diagnostic Report (Preview Mode) ===\nTime: ${new Date().toISOString()}\nPlatform: Web Preview\nLogs Count: ${mockLogs.length}\n${mockLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}]: ${l.message}`).join('\n')}`;
     }
+    case 'oauth_has_session':
+      return mockLoggedIn;
+    case 'oauth_authorize_url':
+      return `https://dash.novalink.lk/auth/app/authorize?client_id=netch-windows&code_challenge=${args.codeChallenge}&state=${args.state}`;
+    case 'oauth_exchange_code': {
+      mockLoggedIn = true;
+      return null;
+    }
+    case 'oauth_fetch_user': {
+      const mockUser: UserProfile = { id: 1, name: 'Preview User', email: 'preview@example.com', balance: 12.5 };
+      return mockUser;
+    }
+    case 'oauth_fetch_subscriptions': {
+      const mockSubs: SubscriptionInfo[] = [];
+      return mockSubs;
+    }
+    case 'oauth_logout': {
+      mockLoggedIn = false;
+      return null;
+    }
     default:
       console.warn(`[mockInvoke] Unknown command: ${cmd}`, args);
       return null;
@@ -155,6 +178,14 @@ export const api = {
   getTrafficStats: () => invokeTauri<TrafficStats>('get_traffic_stats'),
   openUrl: (url: string) => invokeTauri<void>('open_url', { url }),
   exportDiagnosticReport: () => invokeTauri<string>('export_diagnostic_report'),
+  oauthHasSession: () => invokeTauri<boolean>('oauth_has_session'),
+  oauthAuthorizeUrl: (codeChallenge: string, state: string) =>
+    invokeTauri<string>('oauth_authorize_url', { codeChallenge, state }),
+  oauthExchangeCode: (code: string, verifier: string) =>
+    invokeTauri<void>('oauth_exchange_code', { code, verifier }),
+  oauthFetchUser: () => invokeTauri<UserProfile>('oauth_fetch_user'),
+  oauthFetchSubscriptions: () => invokeTauri<SubscriptionInfo[]>('oauth_fetch_subscriptions'),
+  oauthLogout: () => invokeTauri<void>('oauth_logout'),
 };
 
 export async function openExternalUrl(url: string): Promise<void> {

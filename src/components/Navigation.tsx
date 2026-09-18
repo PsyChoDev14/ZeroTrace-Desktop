@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shield, Globe, BarChart2, Settings, Plus } from 'lucide-react';
 
-export type NavTab = 'home' | 'servers' | 'statistics' | 'settings' | 'logs';
+export type NavTab = 'home' | 'servers' | 'statistics' | 'settings' | 'logs' | 'account';
 
 interface NavigationProps {
   currentTab: NavTab;

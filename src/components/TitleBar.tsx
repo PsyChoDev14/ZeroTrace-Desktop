@@ -1,14 +1,71 @@
-import React from 'react';
-import { Minus, X, Terminal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Minus, X, Terminal, User } from 'lucide-react';
 import { ZeroTraceWordmark } from './Icons';
 import { isTauri } from '../utils/tauriBridge';
 
 interface TitleBarProps {
   isConnected?: boolean;
   onOpenLogs?: () => void;
+  /** Omit to hide the account button (e.g. while the login page is showing). */
+  onOpenAccount?: () => void;
+  accountActive?: boolean;
+  accountName?: string;
+  avatarUrl?: string;
 }
 
-const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs }) => {
+// Round profile button: picture when signed in, initial as fallback, generic icon when signed out.
+const AccountButton: React.FC<{
+  onClick: () => void;
+  active?: boolean;
+  name?: string;
+  avatarUrl?: string;
+}> = ({ onClick, active, name, avatarUrl }) => {
+  const [failed, setFailed] = useState(false);
+  const initial = name?.trim()[0]?.toUpperCase();
+  return (
+    <button
+      onClick={e => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      className={`w-[22px] h-[22px] mr-1 rounded-full flex items-center justify-center overflow-hidden text-[10px] font-bold cursor-pointer outline-none focus:outline-none transition-all border ${
+        active
+          ? 'border-zt-accent bg-zt-accent/20 text-zt-accent shadow-[0_0_10px_rgba(84,104,255,0.45)]'
+          : 'border-zt-border-strong bg-zt-surface-2 text-zt-text-muted hover:border-zt-accent hover:text-zt-accent'
+      }`}
+      title={name ? `Account — ${name}` : 'Account'}
+      aria-label="Account"
+    >
+      {avatarUrl && !failed ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : initial ? (
+        initial
+      ) : (
+        <User size={12} />
+      )}
+    </button>
+  );
+};
+
+const TitleBarComponent: React.FC<TitleBarProps> = ({
+  isConnected,
+  onOpenLogs,
+  onOpenAccount,
+  accountActive,
+  accountName,
+  avatarUrl,
+}) => {
+  const accountButton = onOpenAccount ? (
+    <AccountButton onClick={onOpenAccount} active={accountActive} name={accountName} avatarUrl={avatarUrl} />
+  ) : null;
+
   const isMac = typeof navigator !== 'undefined' && (
     /Mac/i.test(navigator.userAgent || '') ||
     /Mac/i.test((navigator as unknown as { platform?: string }).platform || '')
@@ -103,6 +160,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
           className="relative z-10 flex items-center pointer-events-auto"
           onMouseDown={e => e.stopPropagation()}
         >
+          {accountButton}
           {onOpenLogs && (
             <button
               onClick={e => {
@@ -148,6 +206,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({ isConnected, onOpenLogs })
         className="relative z-10 flex items-center gap-1 pointer-events-auto"
         onMouseDown={e => e.stopPropagation()}
       >
+        {accountButton}
         {onOpenLogs && (
           <button
             onClick={e => {

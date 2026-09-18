@@ -61,6 +61,10 @@ pub struct ProxyConfig {
     pub ping_ms: i64,
     #[serde(default = "default_created_at")]
     pub created_at: i64,
+    /// Set when this config was synced from a NetchSuite account subscription.
+    /// `None` means it was added manually (pasted/scanned) and is never touched by account sync.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subscription_id: Option<i64>,
 }
 
 fn default_security() -> String { "none".to_string() }

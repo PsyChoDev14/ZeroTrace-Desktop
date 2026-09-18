@@ -1,7 +1,7 @@
 import React from 'react';
 import { Globe, MoreVertical, Check, Edit2, Share2, Trash2 } from 'lucide-react';
 import { ProxyConfig } from '../types';
-import { ProtocolBadge } from './Icons';
+import { ProtocolBadge, SyncedBadge } from './Icons';
 import { formatPing } from '../utils/formatters';
 
 interface ServerCardProps {
@@ -55,11 +55,14 @@ export const ServerCard: React.FC<ServerCardProps> = ({
 
         {/* Server Details */}
         <div className="flex flex-col min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs font-semibold text-zt-text line-clamp-2 break-words leading-snug" title={config.name}>
+            {config.name}
+          </span>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1 min-w-0">
             <ProtocolBadge protocol={config.protocol} />
-            <span className="text-xs font-semibold text-zt-text truncate">{config.name}</span>
+            {config.subscriptionId != null && <SyncedBadge />}
+            <span className="text-[11px] font-mono text-zt-text-faint truncate max-w-full">{subtitle}</span>
           </div>
-          <span className="text-[11px] font-mono text-zt-text-faint truncate mt-0.5">{subtitle}</span>
         </div>
       </div>
 

@@ -24,6 +24,9 @@
     --zt-warn-soft: rgba(229, 163, 60, 0.14);
     --zt-danger: 240 83 61;
     --zt-danger-soft: rgba(240, 83, 61, 0.14);
+    --glass-line: rgba(255, 255, 255, 0.09);
+    --g-hi: rgba(255, 255, 255, 0.10);
+    --g-spin: #F4F4F6;
   }
 
   .theme-light {
@@ -48,6 +51,9 @@
     --zt-warn-soft: rgba(217, 119, 6, 0.12);
     --zt-danger: 239 68 68;
     --zt-danger-soft: rgba(239, 68, 68, 0.12);
+    --glass-line: rgba(15, 23, 42, 0.09);
+    --g-hi: rgba(255, 255, 255, 0.8);
+    --g-spin: #1F1F1F;
   }
 
   body {

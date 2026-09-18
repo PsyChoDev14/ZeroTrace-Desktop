@@ -132,6 +132,7 @@ impl ConfigParser {
             raw_config: uri_str.to_string(),
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
+            subscription_id: None,
         })
     }
 
@@ -178,6 +179,7 @@ impl ConfigParser {
             raw_config: uri_str.to_string(),
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
+            subscription_id: None,
         })
     }
 
@@ -234,6 +236,7 @@ impl ConfigParser {
             raw_config: uri_str.to_string(),
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
+            subscription_id: None,
         })
     }
 
@@ -318,6 +321,7 @@ impl ConfigParser {
             raw_config: uri_str.to_string(),
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
+            subscription_id: None,
         })
     }
 
@@ -358,6 +362,7 @@ impl ConfigParser {
             raw_config: json_str.to_string(),
             ping_ms: -1,
             created_at: chrono::Utc::now().timestamp_millis(),
+            subscription_id: None,
         })
     }
 

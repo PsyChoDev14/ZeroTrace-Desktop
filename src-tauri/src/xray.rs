@@ -649,6 +649,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 40,
             created_at: 0,
+            subscription_id: None,
         };
 
         let settings = AppSettings {

@@ -394,6 +394,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 40,
             created_at: 0,
+            subscription_id: None,
         };
 
         let settings = AppSettings {
@@ -475,6 +476,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 25,
             created_at: 0,
+            subscription_id: None,
         };
 
         let settings = AppSettings {
@@ -544,6 +546,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 25,
             created_at: 0,
+            subscription_id: None,
         };
 
         let settings = AppSettings::default();
@@ -581,6 +584,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 25,
             created_at: 0,
+            subscription_id: None,
         };
 
         let settings = AppSettings::default();
@@ -616,6 +620,7 @@ mod tests {
             raw_config: "".to_string(),
             ping_ms: 25,
             created_at: 0,
+            subscription_id: None,
         };
 
         let mut settings = AppSettings::default();

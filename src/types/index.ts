@@ -21,6 +21,7 @@ export interface ProxyConfig {
   rawConfig?: string;      // Original URI or custom JSON
   pingMs: number;          // Latency in ms (-1 = untested)
   createdAt: number;
+  subscriptionId?: number; // Set when synced from a NetchSuite account subscription; absent for manual configs
 }
 
 export type VpnStatusType = 'disconnected' | 'connecting' | 'connected' | 'stopping' | 'error';
@@ -76,4 +77,34 @@ export interface DiagnosticLog {
   level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
   tag: string;
   message: string;
+}
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  balance: number;
+  avatarUrl?: string;
+}
+
+export interface SubscriptionInfo {
+  id: number;
+  status: string;
+  planName: string;
+  packageName: string;
+  serverLocation: string;
+  configUrl: string;
+  expiry: {
+    date: string;
+    daysRemaining: number;
+    isExpired: boolean;
+    neverExpires: boolean;
+  };
+  usage: {
+    downloadGb: number;
+    uploadGb: number;
+    totalGb: number;
+    limitGb: number;
+    usedPercentage: number;
+  };
 }

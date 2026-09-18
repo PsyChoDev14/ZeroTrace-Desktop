@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod autostart;
 pub mod commands;
 pub mod models;
@@ -11,7 +12,9 @@ pub mod xray;
 use std::sync::Arc;
 use parking_lot::Mutex;
 use tauri::Manager;
+use tauri_plugin_deep_link::DeepLinkExt;
 
+use auth::*;
 use commands::*;
 use models::*;
 use storage::StorageManager;
@@ -28,7 +31,14 @@ pub fn run() {
                 let _ = w.set_focus();
             }
         }))
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // Register the netchvpn:// scheme for OAuth login callbacks.
+            // No-op error on macOS: schemes there are registered via Info.plist at bundle time instead.
+            if let Err(e) = app.deep_link().register_all() {
+                eprintln!("[DeepLink] register_all skipped: {}", e);
+            }
+
             let app_handle = app.handle();
             let app_data_dir = app_handle.path().app_data_dir().unwrap_or_else(|_| {
                 std::env::current_dir().unwrap_or_default().join(".zerotrace")
@@ -175,6 +185,12 @@ pub fn run() {
             download_and_install_update,
             open_url,
             export_diagnostic_report,
+            oauth_has_session,
+            oauth_authorize_url,
+            oauth_exchange_code,
+            oauth_fetch_user,
+            oauth_fetch_subscriptions,
+            oauth_logout,
         ]);
 
     app_builder
