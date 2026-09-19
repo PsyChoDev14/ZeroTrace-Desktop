@@ -7,10 +7,13 @@ use serde::{Deserialize, Serialize};
 // macOS Keychain).
 const SERVICE: &str = "lk.novalink.zerotrace.desktop";
 const API_BASE: &str = "https://dash.novalink.lk";
-const CLIENT_ID: &str = "netch-windows";
+// The backend pairs client_id with platform: netch-macos + macos is accepted, but netch-windows +
+// macos is rejected with a 400 at the Authorize step. Every non-macOS build keeps the windows pair.
+const CLIENT_ID: &str = if cfg!(target_os = "macos") { "netch-macos" } else { "netch-windows" };
 const REDIRECT_URI: &str = "netchvpn://auth/callback";
 const DEVICE_NAME: &str = "ZeroTrace Desktop";
-const PLATFORM: &str = "windows";
+// Shown on the dashboard's authorize prompt and device list.
+const PLATFORM: &str = if cfg!(target_os = "macos") { "macos" } else { "windows" };
 // Sentinel error string the frontend matches on to distinguish "please sign in
 // again" from a transient network/server error.
 const SESSION_EXPIRED: &str = "SESSION_EXPIRED";
@@ -360,6 +363,14 @@ pub async fn oauth_logout() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn authorize_url_sends_a_matching_client_id_and_platform() {
+        let expected = if cfg!(target_os = "macos") { "macos" } else { "windows" };
+        let url = oauth_authorize_url("challenge".into(), "state".into());
+        assert!(url.contains(&format!("platform={expected}")), "{url}");
+        assert!(url.contains(&format!("client_id=netch-{expected}")), "{url}");
+    }
 
     #[test]
     fn token_exchange_user_avatar_is_extracted() {

@@ -1,21 +1,17 @@
 {
-  "version": "1.5.0",
-  "versionCode": 30,
-  "releaseDate": "2026-09-18",
+  "version": "1.5.1",
+  "versionCode": 31,
+  "releaseDate": "2026-09-19",
   "changelog": [
-    "NetchSuite Sign-In: New ZeroTrace login page with Continue with Google - sign in to sync your subscriptions as servers automatically",
-    "Optional Account: Use this device offline keeps ZeroTrace fully usable without signing in, and any Xray config from any provider still works exactly as before",
-    "Smart Sync: Only active subscriptions become servers; switching accounts replaces the previous account's servers and expired plans are removed. Manually added servers are never touched",
-    "Account View: Profile picture, name and LKR balance, opened from the round account button in the title bar",
-    "Secure Sessions: Sign-in tokens are kept in the OS credential vault (Windows Credential Manager / macOS Keychain), never in the app UI",
-    "Cleaner Server Cards: Full server names and a clear Synced badge, no more clogged text"
+    "macOS Device Recognition: Signing in from a Mac now registers the device as macOS on your NetchSuite dashboard instead of showing it as Windows",
+    "Windows: no changes in this update"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.0/ZeroTrace_1.5.0_x64-setup.exe",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.1/ZeroTrace_1.5.1_x64-setup.exe",
     "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.0/ZeroTrace_1.5.0_aarch64.dmg",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.1/ZeroTrace_1.5.1_aarch64.dmg",
     "sha256": ""
   }
 }
