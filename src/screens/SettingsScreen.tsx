@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Settings, Shield, Globe, Terminal, ChevronRight, Check, RefreshCw, ExternalLink, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings, Shield, Globe, Terminal, ChevronRight, Check, RefreshCw, ExternalLink, Sun, Moon, Monitor, Languages } from 'lucide-react';
 import { AppSettings, DpiBypassMode } from '../types';
 import { checkForAppUpdate, AppUpdateInfo, CURRENT_APP_VERSION } from '../utils/updater';
 import { openExternalUrl } from '../utils/tauriBridge';
 import { AppleIcon, Windows11Icon } from '../components/Icons';
+import { t, getLang, LANGUAGES, Lang } from '../i18n';
 
 interface SettingsScreenProps {
   settings: AppSettings;
   onSave: (updated: AppSettings) => void;
   onOpenLogs?: () => void;
   onShowUpdateModal?: (info: AppUpdateInfo) => void;
+  onLanguageChange: (lang: Lang) => void;
 }
 
 /**
@@ -35,6 +37,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onSave,
   onOpenLogs,
   onShowUpdateModal,
+  onLanguageChange,
 }) => {
   const [current, setCurrent] = useState<AppSettings>(settings);
   const [savedMessage, setSavedMessage] = useState(false);
@@ -58,11 +61,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       if (res.hasUpdate && res.update) {
         onShowUpdateModal?.(res.update);
       } else {
-        setUpdateMsg(`Up to date • v${CURRENT_APP_VERSION}`);
+        setUpdateMsg(t('Up to date • v{v}', { v: CURRENT_APP_VERSION }));
         setTimeout(() => setUpdateMsg(null), 4000);
       }
     } catch {
-      setUpdateMsg('Could not check for updates');
+      setUpdateMsg(t('Could not check for updates'));
       setTimeout(() => setUpdateMsg(null), 4000);
     } finally {
       setIsCheckingUpdate(false);
@@ -78,10 +81,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   ];
 
   const dpiOptions: { id: DpiBypassMode; label: string }[] = [
-    { id: 'OFF', label: 'Disabled (Direct - Fastest)' },
-    { id: 'SMART_FRAGMENT', label: 'Smart TLS Fragment (Anti-Censorship)' },
-    { id: 'DEEP_STEALTH', label: 'Deep Stealth Engine' },
-    { id: 'CUSTOM', label: 'Custom Fragment' },
+    { id: 'OFF', label: t('Disabled (Direct - Fastest)') },
+    { id: 'SMART_FRAGMENT', label: t('Smart TLS Fragment (Anti-Censorship)') },
+    { id: 'DEEP_STEALTH', label: t('Deep Stealth Engine') },
+    { id: 'CUSTOM', label: t('Custom Fragment') },
   ];
 
   const utlsOptions = ['chrome', 'firefox', 'safari', 'ios', 'android', 'edge'];
@@ -98,10 +101,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     <div className="flex-1 flex flex-col px-4 pt-3 pb-4 max-w-sm mx-auto w-full overflow-y-auto space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-1 shrink-0">
-        <h1 className="text-base font-bold text-zt-text tracking-tight">Settings</h1>
+        <h1 className="text-base font-bold text-zt-text tracking-tight">{t('Settings')}</h1>
         {savedMessage && (
           <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium animate-fade-in">
-            <Check size={13} /> Saved
+            <Check size={13} /> {t('Saved')}
           </span>
         )}
       </div>
@@ -109,7 +112,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 0: Appearance */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Appearance
+          {t('Appearance')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border p-3 flex items-center justify-between gap-3 text-xs shadow-sm">
           <div className="flex items-center gap-2.5">
@@ -122,7 +125,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <Moon size={15} className="text-indigo-400 transition-transform duration-300 -rotate-12" />
               )}
             </div>
-            <span className="font-medium text-zt-text text-xs">Interface Theme</span>
+            <span className="font-medium text-zt-text text-xs">{t('Interface Theme')}</span>
           </div>
 
           {/* Clean Minimalist Segmented Control */}
@@ -151,26 +154,45 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     selected ? 'text-white font-semibold' : 'text-zt-text-muted hover:text-zt-text font-medium'
                   }`}
                 >
-                  {mode === 'system' ? 'Auto' : mode === 'dark' ? 'Dark' : 'Light'}
+                  {mode === 'system' ? t('Auto') : mode === 'dark' ? t('Dark') : t('Light')}
                 </button>
               );
             })}
           </div>
+        </div>
+
+        {/* Language */}
+        <div className="mt-2 rounded-2xl bg-zt-surface border border-zt-border p-3 flex items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-zt-surface-2 border border-zt-border flex items-center justify-center shrink-0">
+              <Languages size={15} className="text-emerald-400" />
+            </div>
+            <span className="font-medium text-zt-text text-xs">{t('Language')}</span>
+          </div>
+          <select
+            value={getLang()}
+            onChange={e => onLanguageChange(e.target.value as Lang)}
+            className="rounded-xl bg-zt-surface-2 border border-zt-border px-2.5 py-1 text-xs text-zt-text focus:outline-none focus:border-zt-accent cursor-pointer"
+          >
+            {LANGUAGES.map(l => (
+              <option key={l.id} value={l.id} className="bg-zt-surface text-zt-text">{l.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Group 1: Startup & Automation */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Startup & Automation
+          {t('Startup & Automation')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border overflow-hidden divide-y divide-zt-border text-xs shadow-sm">
           {/* Launch on System Startup */}
           <div className="p-3 flex items-center justify-between gap-3">
             <div className="flex flex-col pr-2">
-              <span className="font-medium text-zt-text">Launch on System Startup</span>
+              <span className="font-medium text-zt-text">{t('Launch on System Startup')}</span>
               <span className="text-[11px] text-zt-text-muted mt-0.5">
-                Automatically open ZeroTrace when your computer boots up
+                {t('Automatically open ZeroTrace when your computer boots up')}
               </span>
             </div>
             <button
@@ -193,9 +215,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           {/* Auto-Connect on Launch */}
           <div className="p-3 flex items-center justify-between gap-3">
             <div className="flex flex-col pr-2">
-              <span className="font-medium text-zt-text">Auto-Connect on Launch</span>
+              <span className="font-medium text-zt-text">{t('Auto-Connect on Launch')}</span>
               <span className="text-[11px] text-zt-text-muted mt-0.5">
-                Start VPN automatically using the last connected configuration
+                {t('Start VPN automatically using the last connected configuration')}
               </span>
             </div>
             <button
@@ -220,14 +242,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 2: DNS & Anti-Censorship */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Network & DNS
+          {t('Network & DNS')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border overflow-hidden divide-y divide-zt-border text-xs">
           {/* DNS Resolver */}
           <div className="p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <Globe size={15} className="text-blue-400 shrink-0" />
-              <span className="font-medium text-zt-text">DNS Resolver</span>
+              <span className="font-medium text-zt-text">{t('DNS Resolver')}</span>
             </div>
             <select
               value={current.primaryDns}
@@ -246,7 +268,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <div className="p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <Shield size={15} className="text-blue-400 shrink-0" />
-              <span className="font-medium text-zt-text">DPI Bypass</span>
+              <span className="font-medium text-zt-text">{t('DPI Bypass')}</span>
             </div>
             <select
               value={current.dpiBypassMode}
@@ -285,14 +307,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 2: Routing & Security Toggles */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Tunnel & Routing
+          {t('Tunnel & Routing')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border overflow-hidden divide-y divide-zt-border text-xs">
           {/* Bypass LAN */}
           <div className="p-3 flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="font-medium text-zt-text">Bypass Local LAN</span>
-              <span className="text-[11px] text-zt-text-muted">Direct routing for 192.168.x.x subnets</span>
+              <span className="font-medium text-zt-text">{t('Bypass Local LAN')}</span>
+              <span className="text-[11px] text-zt-text-muted">{t('Direct routing for 192.168.x.x subnets')}</span>
             </div>
             <button
               type="button"
@@ -313,7 +335,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <div className="p-3 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="font-medium text-zt-text">Mux Multiplexing</span>
-              <span className="text-[11px] text-zt-text-muted">Consolidate TCP streams</span>
+              <span className="text-[11px] text-zt-text-muted">{t('Consolidate TCP streams')}</span>
             </div>
             <button
               type="button"
@@ -335,14 +357,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 3: Carrier Bug Host SNI Tweak */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Carrier SNI Override
+          {t('Carrier SNI Override')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border p-3 text-xs">
           <input
             type="text"
             value={current.sriLankaSniTweak}
             onChange={e => updateSetting('sriLankaSniTweak', e.target.value)}
-            placeholder="e.g. slt.lk, zero.dialog.lk (optional)"
+            placeholder={t('e.g. slt.lk, zero.dialog.lk (optional)')}
             className="w-full rounded-xl bg-zt-surface-2 border border-zt-border px-3 py-2 text-xs font-mono text-zt-text placeholder-zt-text-faint focus:outline-none focus:border-zt-accent"
           />
         </div>
@@ -351,7 +373,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 4: Support & Community */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          Support
+          {t('Support')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border divide-y divide-zt-border overflow-hidden shadow-sm">
           <button
@@ -365,10 +387,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-zt-text group-hover:text-emerald-400 transition-colors">
-                    WhatsApp Support
+                    {t('WhatsApp Support')}
                   </span>
                   <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                    Live Chat
+                    {t('Live Chat')}
                   </span>
                 </div>
                 <span className="text-[11px] text-zt-text-muted mt-0.5 font-mono">
@@ -378,7 +400,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
             <div className="flex items-center gap-1.5 text-zt-text-faint group-hover:text-emerald-400 transition-colors">
               <span className="text-[11px] font-medium text-zt-text-muted group-hover:text-emerald-300">
-                Contact
+                {t('Contact')}
               </span>
               <ExternalLink size={12} className="text-zt-text-faint group-hover:text-emerald-300" />
             </div>
@@ -396,16 +418,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </div>
                 <div className="flex flex-col">
                   <span className="font-semibold text-zt-text group-hover:text-zt-accent transition-colors">
-                    Send Diagnostic Report
+                    {t('Send Diagnostic Report')}
                   </span>
                   <span className="text-[11px] text-zt-text-muted mt-0.5">
-                    Capture & share real-time logs with support
+                    {t('Capture & share real-time logs with support')}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 text-zt-text-faint group-hover:text-blue-400 transition-colors">
                 <span className="text-[11px] font-medium text-zt-text-muted group-hover:text-blue-300">
-                  Export
+                  {t('Export')}
                 </span>
                 <ChevronRight size={13} />
               </div>
@@ -417,7 +439,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Group 5: About & Software Updates */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-muted uppercase tracking-wider px-1 mb-1.5 block">
-          About & Updates
+          {t('About & Updates')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border divide-y divide-zt-border overflow-hidden shadow-sm">
           {/* Version Details Row */}
@@ -425,7 +447,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <div className="flex flex-col">
               <span className="font-semibold text-zt-text">ZeroTrace Desktop</span>
               <span className="text-[11px] text-zt-text-muted mt-0.5">
-                {isMac ? 'Universal Build (Apple Silicon & Intel)' : '64-bit Build (x64 Architecture)'}
+                {isMac ? t('Universal Build (Apple Silicon & Intel)') : t('64-bit Build (x64 Architecture)')}
               </span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zt-surface-2 border border-zt-border text-xs font-medium text-zt-text shadow-sm">
@@ -453,15 +475,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="font-medium text-zt-text group-hover:text-zt-accent transition-colors">
-                  Software Update
+                  {t('Software Update')}
                 </span>
                 <span className="text-[11px] text-zt-text-muted mt-0.5 transition-colors">
-                  {updateMsg || 'Check for new releases & patches'}
+                  {updateMsg || t('Check for new releases & patches')}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 text-zt-text-faint group-hover:text-zt-text transition-colors">
-              {isCheckingUpdate && <span className="text-[11px] text-blue-400 font-medium">Checking…</span>}
+              {isCheckingUpdate && <span className="text-[11px] text-blue-400 font-medium">{t('Checking…')}</span>}
               <ChevronRight size={14} />
             </div>
           </button>
@@ -476,7 +498,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         >
           <div className="flex items-center gap-2.5">
             <Terminal size={15} className="text-blue-400" />
-            <span className="text-xs font-medium text-zt-text">System Diagnostics & Logs</span>
+            <span className="text-xs font-medium text-zt-text">{t('System Diagnostics & Logs')}</span>
           </div>
           <ChevronRight size={14} className="text-zt-text-faint group-hover:text-zt-text transition-colors" />
         </div>

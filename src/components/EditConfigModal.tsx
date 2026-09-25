@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Server } from 'lucide-react';
 import { ProxyConfig } from '../types';
 import { api } from '../utils/tauriBridge';
+import { t } from '../i18n';
 
 interface EditConfigModalProps {
   config: ProxyConfig | null;
@@ -96,7 +97,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
         <div className="flex items-center justify-between pb-4 border-b border-zt-border">
           <div className="flex items-center gap-2">
             <Server size={18} className="text-zt-accent" />
-            <h2 className="text-base font-bold text-zt-text">Edit Server Config</h2>
+            <h2 className="text-base font-bold text-zt-text">{t('Edit Server Config')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -108,7 +109,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
 
         <div className="my-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           <div>
-            <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">Server Name / Alias</label>
+            <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">{t('Server Name / Alias')}</label>
             <input
               type="text"
               value={name}
@@ -119,7 +120,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
 
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
-              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">Host / Domain</label>
+              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">{t('Host / Domain')}</label>
               <input
                 type="text"
                 value={server}
@@ -128,7 +129,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">Port</label>
+              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">{t('Port')}</label>
               <input
                 type="number"
                 value={port}
@@ -140,7 +141,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
 
           <div>
             <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">
-              UUID / Password / Secret
+              {t('UUID / Password / Secret')}
             </label>
             <input
               type="text"
@@ -162,7 +163,7 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
 
           {config.network === 'ws' && (
             <div>
-              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">WebSocket Path</label>
+              <label className="block text-[11px] font-semibold text-zt-text-muted mb-1">{t('WebSocket Path')}</label>
               <input
                 type="text"
                 value={path}
@@ -201,14 +202,14 @@ export const EditConfigModal: React.FC<EditConfigModalProps> = ({ config, isOpen
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors"
           >
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             onClick={handleSave}
             className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-zt-accent text-white hover:bg-zt-accent-hover transition-colors shadow-lg shadow-zt-accent/25"
           >
             <Save size={14} />
-            <span>Save Changes</span>
+            <span>{t('Save Changes')}</span>
           </button>
         </div>
       </div>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { LogOut, RefreshCw, Wallet, AlertCircle, Wifi } from 'lucide-react';
 import { SubscriptionInfo, UserProfile } from '../types';
 import { LoginScreen } from './LoginScreen';
+import { t } from '../i18n';
+import { usagePercent, DATA_WARN_PERCENT } from '../utils/planAlerts';
 
 // Profile picture with an initial-letter fallback when the backend sends none or the image fails to load.
 const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
@@ -22,6 +24,16 @@ const Avatar: React.FC<{ name: string; url?: string }> = ({ name, url }) => {
       )}
     </div>
   );
+};
+
+const expiryLabel = (sub: SubscriptionInfo): string => {
+  const { neverExpires, isExpired, daysRemaining } = sub.expiry;
+  if (neverExpires) return t('Never expires');
+  if (isExpired) {
+    const n = Math.abs(daysRemaining);
+    return n > 0 ? t('Expired {n}d ago', { n }) : t('Expired');
+  }
+  return t('{n}d left', { n: daysRemaining });
 };
 
 interface AccountScreenProps {
@@ -63,12 +75,12 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     <div className="flex-1 flex flex-col px-4 pt-3 pb-4 max-w-sm mx-auto w-full overflow-y-auto space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-1 shrink-0">
-        <h1 className="text-base font-bold text-zt-text tracking-tight">Account</h1>
+        <h1 className="text-base font-bold text-zt-text tracking-tight">{t('Account')}</h1>
         <button
           onClick={onRefresh}
           disabled={loading}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-zt-text-faint hover:text-zt-text hover:bg-zt-surface-2 transition-colors disabled:opacity-50"
-          title="Refresh"
+          title={t('Refresh')}
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -77,7 +89,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       {error && (
         <div className="flex items-center justify-between gap-2 text-[11px] text-zt-danger bg-zt-danger-soft border border-zt-danger/20 rounded-lg px-2.5 py-1.5">
           <span className="flex items-center gap-1.5"><AlertCircle size={13} /> {error}</span>
-          <button onClick={onRefresh} className="font-semibold underline shrink-0">Retry</button>
+          <button onClick={onRefresh} className="font-semibold underline shrink-0">{t('Retry')}</button>
         </div>
       )}
 
@@ -91,7 +103,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           </div>
         </div>
         <div className="flex items-center justify-between text-xs pt-2 border-t border-zt-border">
-          <span className="flex items-center gap-1.5 text-zt-text-faint"><Wallet size={13} /> Balance</span>
+          <span className="flex items-center gap-1.5 text-zt-text-faint"><Wallet size={13} /> {t('Balance')}</span>
           <span className="font-mono font-bold text-zt-text">
             LKR {account.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
@@ -101,11 +113,11 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       {/* Subscriptions */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-faint uppercase tracking-wider px-1 mb-1.5 block">
-          Subscriptions
+          {t('Subscriptions')}
         </span>
         {subscriptions.length === 0 ? (
           <div className="rounded-2xl bg-zt-surface border border-zt-border p-4 text-center text-xs text-zt-text-faint">
-            No active subscriptions on this account.
+            {t('No active subscriptions on this account.')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -120,17 +132,28 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                         : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     }`}
                   >
-                    {sub.expiry.isExpired ? 'Expired' : sub.status}
+                    {sub.expiry.isExpired ? t('Expired') : sub.status}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-zt-text-faint">
                   <Wifi size={12} />
                   <span className="truncate">{sub.packageName || sub.serverLocation}</span>
                 </div>
+                {(() => {
+                  const pct = usagePercent(sub);
+                  if (pct === null) return null;
+                  const bar = pct >= DATA_WARN_PERCENT ? 'bg-zt-danger' : pct >= 75 ? 'bg-zt-warn' : 'bg-zt-accent';
+                  return (
+                    <div className="pt-1">
+                      <div className="h-1.5 rounded-full bg-zt-surface-2 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${bar}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="mt-1 text-[10px] text-zt-text-faint text-right">{t('{pct}% used', { pct })}</div>
+                    </div>
+                  );
+                })()}
                 <div className="flex items-center justify-between text-[11px] font-mono text-zt-text-faint pt-1 border-t border-zt-border">
-                  <span>
-                    {sub.expiry.neverExpires ? 'Never expires' : `${sub.expiry.daysRemaining}d left`}
-                  </span>
+                  <span>{expiryLabel(sub)}</span>
                   <span>
                     {sub.usage.totalGb.toFixed(1)} / {sub.usage.limitGb > 0 ? `${sub.usage.limitGb.toFixed(0)} GB` : '∞'}
                   </span>
@@ -146,7 +169,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
         className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zt-surface border border-zt-border text-zt-danger text-xs font-semibold active:scale-95 transition-transform"
       >
         <LogOut size={14} />
-        Sign Out
+        {t('Sign Out')}
       </button>
     </div>
   );

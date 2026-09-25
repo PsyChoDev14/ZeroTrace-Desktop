@@ -486,6 +486,51 @@ pub fn parse_config(raw: String) -> Option<ProxyConfig> {
     ConfigParser::parse_single(&raw)
 }
 
+async fn fetch_subscription_configs(url: &str) -> Result<Vec<ProxyConfig>, String> {
+    let parsed = url::Url::parse(url.trim()).map_err(|_| "That is not a valid URL".to_string())?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err("Only http(s) subscription links are supported".to_string());
+    }
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("ZeroTrace-Desktop/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let res = client.get(parsed).send().await.map_err(|e| format!("Could not reach the link: {e}"))?;
+    if !res.status().is_success() {
+        return Err(format!("The link returned HTTP {}", res.status().as_u16()));
+    }
+    let body = res.text().await.map_err(|e| e.to_string())?;
+    let found = ConfigParser::parse_subscription_body(&body);
+    if found.is_empty() {
+        return Err("No supported servers found at that link".to_string());
+    }
+    Ok(found)
+}
+
+/// Fetches a subscription URL (any provider), saves the configs it contains that aren't already
+/// stored, and returns the newly added ones. Runs in Rust because webview fetch() is CORS-blocked.
+#[tauri::command]
+pub async fn import_subscription_url(url: String, state: State<'_, SharedState>) -> Result<Vec<ProxyConfig>, String> {
+    let found = fetch_subscription_configs(&url).await?;
+
+    let mut ctx = state.lock();
+    let mut added = Vec::new();
+    for cfg in found {
+        if ctx.configs.iter().any(|c| c.raw_config == cfg.raw_config) {
+            continue;
+        }
+        ctx.configs.insert(0, cfg.clone());
+        added.push(cfg);
+    }
+    if !added.is_empty() {
+        let configs = ctx.configs.clone();
+        let _ = ctx.storage.save_configs(&configs);
+        ctx.add_log("INFO", "ZeroTrace", &format!("Imported {} server(s) from subscription link", added.len()));
+    }
+    Ok(added)
+}
+
 #[tauri::command]
 pub fn get_settings(state: State<SharedState>) -> AppSettings {
     let mut ctx = state.lock();
@@ -1074,3 +1119,41 @@ fn sanitize_diagnostic_text(text: &str) -> String {
 
 
 
+
+#[cfg(test)]
+mod subscription_import_tests {
+    use super::fetch_subscription_configs;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    async fn serve_once(status: &str, body: String) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let status = status.to_string();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = sock.read(&mut buf).await;
+            let resp = format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+            let _ = sock.write_all(resp.as_bytes()).await;
+        });
+        format!("http://{addr}/sub")
+    }
+
+    #[tokio::test]
+    async fn imports_base64_subscription_over_http() {
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let links = "trojan://p@a.example.com:443#one\ntrojan://q@b.example.com:443#two";
+        let url = serve_once("200 OK", STANDARD.encode(links)).await;
+        let cfgs = fetch_subscription_configs(&url).await.unwrap();
+        assert_eq!(cfgs.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn rejects_bad_status_bad_scheme_and_empty_body() {
+        let url = serve_once("404 Not Found", String::new()).await;
+        assert!(fetch_subscription_configs(&url).await.unwrap_err().contains("404"));
+        assert!(fetch_subscription_configs("file:///etc/passwd").await.is_err());
+        let url = serve_once("200 OK", "<html>hi</html>".into()).await;
+        assert!(fetch_subscription_configs(&url).await.unwrap_err().contains("No supported servers"));
+    }
+}

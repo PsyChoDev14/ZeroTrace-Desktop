@@ -104,6 +104,8 @@ async function mockInvoke(cmd: string, args: Record<string, unknown>): Promise<u
       }
       return mockConfigs;
     }
+    case 'import_subscription_url':
+      return [];
     case 'get_settings':
       return mockSettings;
     case 'save_settings':
@@ -171,6 +173,7 @@ export const api = {
   pingConfig: (id: string) => invokeTauri<number>('ping_config', { id }),
   pingAll: () => invokeTauri<ProxyConfig[]>('ping_all'),
   parseConfig: (raw: string) => invokeTauri<ProxyConfig | null>('parse_config', { raw }),
+  importSubscriptionUrl: (url: string) => invokeTauri<ProxyConfig[]>('import_subscription_url', { url }),
   getSettings: () => invokeTauri<AppSettings>('get_settings'),
   saveSettings: (settings: AppSettings) => invokeTauri<boolean>('save_settings', { settings }),
   getLogs: () => invokeTauri<DiagnosticLog[]>('get_logs'),

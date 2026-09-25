@@ -3,6 +3,7 @@ import { ArrowDownCircle, Sparkles, X, AlertCircle, Check } from 'lucide-react';
 import { AppUpdateInfo, openUpdateDownload } from '../utils/updater';
 import { isTauri } from '../utils/tauriBridge';
 import { AppleIcon, Windows11Icon } from './Icons';
+import { t } from '../i18n';
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -180,7 +181,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
 
         {/* Title & Version */}
         <h2 className={`text-base font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-zt-text'}`}>
-          Update Available
+          {t('Update Available')}
         </h2>
         <div
           className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono mt-1 mb-2 transition-colors ${
@@ -199,7 +200,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
           <span>{isMac ? 'macOS' : 'Windows 11'}</span>
         </div>
         <p className={`text-xs mb-3 leading-relaxed ${isLight ? 'text-slate-500' : 'text-zt-text-muted'}`}>
-          A new version is ready with performance and security enhancements.
+          {t('A new version is ready with performance and security enhancements.')}
         </p>
 
         {/* Changelog Box */}
@@ -214,7 +215,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
             <div className={`text-[10px] font-semibold uppercase tracking-wider mb-2 px-0.5 ${
               isLight ? 'text-slate-400' : 'text-zt-text-muted'
             }`}>
-              Highlights
+              {t('Highlights')}
             </div>
             <ul className={`space-y-1.5 text-xs max-h-32 overflow-y-auto pr-1 ${
               isLight ? 'text-slate-700' : 'text-zt-text'
@@ -250,7 +251,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
                   : 'bg-zt-surface-2 hover:bg-zt-surface border border-zt-border text-zt-text'
               }`}
             >
-              Later
+              {t('Later')}
             </button>
             <button
               onClick={handleUpdate}
@@ -261,7 +262,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
               }`}
             >
               <ArrowDownCircle size={14} />
-              <span>Update Now</span>
+              <span>{t('Update Now')}</span>
             </button>
           </div>
         ) : (
@@ -286,11 +287,11 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, updateInfo, on
                   </span>
                 )}
                 <span className={`font-medium ${isLight ? 'text-slate-800' : 'text-zt-text'}`}>
-                  {downloadStage === 'downloading' && 'Downloading update…'}
-                  {downloadStage === 'verifying' && 'Verifying package…'}
-                  {downloadStage === 'installing' && 'Installing update…'}
-                  {downloadStage === 'restarting' && 'Restarting ZeroTrace…'}
-                  {downloadStage === 'idle' && 'Preparing update…'}
+                  {downloadStage === 'downloading' && t('Downloading update…')}
+                  {downloadStage === 'verifying' && t('Verifying package…')}
+                  {downloadStage === 'installing' && t('Installing update…')}
+                  {downloadStage === 'restarting' && t('Restarting ZeroTrace…')}
+                  {downloadStage === 'idle' && t('Preparing update…')}
                 </span>
               </div>
               <span className={`font-mono text-xs font-bold ${isLight ? 'text-indigo-600' : 'text-zt-accent'}`}>

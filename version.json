@@ -1,17 +1,19 @@
 {
-  "version": "1.5.1",
-  "versionCode": 31,
-  "releaseDate": "2026-09-19",
+  "version": "1.6.0",
+  "versionCode": 32,
+  "releaseDate": "2026-09-25",
   "changelog": [
-    "macOS Device Recognition: Signing in from a Mac now registers the device as macOS on your NetchSuite dashboard instead of showing it as Windows",
-    "Windows: no changes in this update"
+    "Sinhala & Tamil: New Language option in Settings with friendly, easy-to-read wording",
+    "Subscription Links: Paste any provider's subscription link to add all its servers at once",
+    "Plan Usage: Data usage bars on the Account screen, plus a warning on Home when a plan is about to expire or nearly out of data",
+    "Fixed the confusing '-259d left' label — expired plans now say 'Expired Nd ago'"
   ],
   "windows": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.1/ZeroTrace_1.5.1_x64-setup.exe",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.6.0/ZeroTrace_1.6.0_x64-setup.exe",
     "sha256": ""
   },
   "macos": {
-    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.5.1/ZeroTrace_1.5.1_aarch64.dmg",
+    "url": "https://github.com/PsyChoDev14/ZeroTrace-Desktop/releases/download/v1.6.0/ZeroTrace_1.6.0_aarch64.dmg",
     "sha256": ""
   }
 }

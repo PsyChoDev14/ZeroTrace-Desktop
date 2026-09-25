@@ -63,6 +63,17 @@ impl ConfigParser {
             .collect()
     }
 
+    /// A subscription body is either a plain list of links or that list base64-encoded.
+    pub fn parse_subscription_body(body: &str) -> Vec<ProxyConfig> {
+        let body = body.trim();
+        let text = if body.contains("://") {
+            body.to_string()
+        } else {
+            decode_base64_loose(&body.split_whitespace().collect::<String>()).unwrap_or_default()
+        };
+        Self::parse_multiple(&text)
+    }
+
     fn parse_vless(uri_str: &str) -> Option<ProxyConfig> {
         let url = Url::parse(uri_str).ok()?;
         let host = url.host_str()?.to_string();
@@ -526,5 +537,16 @@ mod tests {
         let uri = "vless://1c803087-b9f6-4be8-bedc-ab3c541d3970@node1.novalink.lk:443?security=tls&type=tcp#ZeroTrace%20Tier%201%262%20Fast%3DHigh";
         let parsed = ConfigParser::parse_single(uri).expect("Should parse VLESS with special characters in fragment");
         assert_eq!(parsed.name, "ZeroTrace Tier 1&2 Fast=High");
+    }
+
+    #[test]
+    fn test_parse_subscription_body_plain_and_base64() {
+        let a = "trojan://pass@example.com:443?sni=example.com#one";
+        let b = "trojan://pass2@example.org:443#two";
+        let plain = format!("{a}\n{b}\n");
+        assert_eq!(ConfigParser::parse_subscription_body(&plain).len(), 2);
+        let encoded = STANDARD.encode(&plain);
+        assert_eq!(ConfigParser::parse_subscription_body(&encoded).len(), 2);
+        assert!(ConfigParser::parse_subscription_body("<html>nope</html>").is_empty());
     }
 }

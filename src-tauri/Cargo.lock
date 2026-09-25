@@ -5679,7 +5679,7 @@ checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
 
 [[package]]
 name = "zerotrace-desktop"
-version = "1.5.1"
+version = "1.6.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",

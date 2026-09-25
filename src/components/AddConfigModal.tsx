@@ -3,14 +3,16 @@ import jsQR from 'jsqr';
 import { X, Clipboard, ArrowRight, AlertCircle, ScanLine } from 'lucide-react';
 import { ProxyConfig } from '../types';
 import { api } from '../utils/tauriBridge';
+import { t } from '../i18n';
 
 interface AddConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdded: (config: ProxyConfig) => void;
+  onImported: (configs: ProxyConfig[]) => void;
 }
 
-export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose, onAdded }) => {
+export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose, onAdded, onImported }) => {
   const [mounted, setMounted] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
   const [rawText, setRawText] = useState('');
@@ -50,7 +52,7 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
       setRawText(clip.trim());
       setError(null);
     } catch {
-      setError('Could not read from clipboard');
+      setError(t('Could not read from clipboard'));
     }
   };
 
@@ -84,7 +86,7 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
       canvas.height = img.naturalHeight;
       const canvasCtx = canvas.getContext('2d');
       if (!canvasCtx) {
-        setError('Could not process the image on this device.');
+        setError(t('Could not process the image on this device.'));
         return;
       }
       canvasCtx.drawImage(img, 0, 0);
@@ -94,16 +96,16 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
       if (code && code.data) {
         setRawText(code.data);
       } else {
-        setError('No QR code found in that image. Try a clearer screenshot or photo.');
+        setError(t('No QR code found in that image. Try a clearer screenshot or photo.'));
       }
     } catch {
-      setError('Could not read the selected image.');
+      setError(t('Could not read the selected image.'));
     }
   };
 
   const handleImport = async () => {
     if (!rawText.trim()) {
-      setError('Please enter a proxy link or JSON');
+      setError(t('Please enter a proxy link or JSON'));
       return;
     }
 
@@ -111,17 +113,30 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
     setError(null);
 
     try {
-      const parsed = await api.parseConfig(rawText.trim());
+      const text = rawText.trim();
+      // A single http(s) link is a subscription URL: fetch it and import every server it lists.
+      if (/^https?:\/\/\S+$/i.test(text)) {
+        const added = await api.importSubscriptionUrl(text);
+        if (added.length === 0) {
+          setError(t('No new servers — everything at that link is already added'));
+          return;
+        }
+        onImported(added);
+        onClose();
+        setRawText('');
+        return;
+      }
+      const parsed = await api.parseConfig(text);
       if (parsed) {
         await api.saveConfig(parsed);
         onAdded(parsed);
         onClose();
         setRawText('');
       } else {
-        setError('Unsupported format. Please provide a valid VLESS, VMess, Trojan, Shadowsocks URI or Xray JSON.');
+        setError(t('Unsupported format. Please provide a valid VLESS, VMess, Trojan, Shadowsocks URI or Xray JSON.'));
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to parse configuration');
+      setError((typeof e === 'string' ? e : e?.message) || t('Failed to parse configuration'));
     } finally {
       setIsProcessing(false);
     }
@@ -143,9 +158,9 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zt-border">
           <div>
-            <h2 className="text-base font-bold text-zt-text">Add Xray Server</h2>
+            <h2 className="text-base font-bold text-zt-text">{t('Add Xray Server')}</h2>
             <p className="text-xs text-zt-text-muted mt-0.5">
-              Supports VLESS Reality, VMess, Trojan, Shadowsocks, and Custom JSON
+              {t('Supports VLESS Reality, VMess, Trojan, Shadowsocks, and Custom JSON')}
             </p>
           </div>
           <button
@@ -159,21 +174,21 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
         {/* Input Area */}
         <div className="my-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-zt-text-muted">Configuration Link or JSON</label>
+            <label className="text-xs font-semibold text-zt-text-muted">{t('Configuration Link or JSON')}</label>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleScanQrImage}
                 className="flex items-center gap-1 text-xs text-zt-accent hover:underline"
               >
                 <ScanLine size={12} />
-                <span>Scan QR Image</span>
+                <span>{t('Scan QR Image')}</span>
               </button>
               <button
                 onClick={handlePaste}
                 className="flex items-center gap-1 text-xs text-zt-accent hover:underline"
               >
                 <Clipboard size={12} />
-                <span>Paste from Clipboard</span>
+                <span>{t('Paste from Clipboard')}</span>
               </button>
             </div>
             <input
@@ -191,7 +206,7 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
               setRawText(e.target.value);
               if (error) setError(null);
             }}
-            placeholder="Paste vless://, vmess://, trojan://, ss://, or { &quot;outbounds&quot;: [...] }"
+            placeholder={t('Paste vless://, vmess://, trojan://, ss://, a subscription link (https://…) or JSON')}
             rows={6}
             className="w-full rounded-2xl bg-zt-surface-2 border border-zt-border px-4 py-3 text-xs font-mono text-zt-text placeholder-zt-text-faint focus:outline-none focus:border-zt-accent transition-colors resize-none"
           />
@@ -210,14 +225,14 @@ export const AddConfigModal: React.FC<AddConfigModalProps> = ({ isOpen, onClose,
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors"
           >
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             onClick={handleImport}
             disabled={isProcessing}
             className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-zt-accent text-white hover:bg-zt-accent-hover transition-colors shadow-lg shadow-zt-accent/25 disabled:opacity-50"
           >
-            <span>{isProcessing ? 'Importing...' : 'Add Server'}</span>
+            <span>{isProcessing ? t('Importing...') : t('Add Server')}</span>
             <ArrowRight size={14} />
           </button>
         </div>

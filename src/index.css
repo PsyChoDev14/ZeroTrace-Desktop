@@ -407,3 +407,6 @@ button:active {
 }
 
 
+
+/* Sinhala/Tamil: tracking utilities break conjunct shaping, so turn them off inside screens (not the brand wordmark). */
+:lang(si) main *, :lang(ta) main * { letter-spacing: normal !important; }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowDown, ArrowUp, Clock } from 'lucide-react';
 import { ProxyConfig, TrafficStats, VpnState } from '../types';
 import { formatBytes, formatDuration, formatSpeed } from '../utils/formatters';
+import { t } from '../i18n';
 
 interface StatisticsScreenProps {
   vpnState: VpnState;
@@ -51,7 +52,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     <div className="flex-1 flex flex-col px-4 pt-3 pb-4 max-w-sm mx-auto w-full overflow-y-auto space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-1 shrink-0">
-        <h1 className="text-base font-bold text-zt-text tracking-tight">Activity</h1>
+        <h1 className="text-base font-bold text-zt-text tracking-tight">{t('Activity')}</h1>
         {isConnected && selectedConfig && (
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
             {selectedConfig.name}
@@ -105,23 +106,23 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         <div className="p-3 rounded-2xl bg-zt-surface border border-zt-border shadow-sm">
           <div className="flex items-center gap-1.5 text-emerald-500 text-xs font-semibold">
             <ArrowDown size={14} />
-            <span>Downloaded</span>
+            <span>{t('Downloaded')}</span>
           </div>
           <div className="text-base font-mono font-bold text-zt-text mt-1.5">
             {formatBytes(trafficStats.totalDownloaded)}
           </div>
-          <span className="text-[10px] text-zt-text-faint">Total session bytes</span>
+          <span className="text-[10px] text-zt-text-faint">{t('Total session bytes')}</span>
         </div>
 
         <div className="p-3 rounded-2xl bg-zt-surface border border-zt-border shadow-sm">
           <div className="flex items-center gap-1.5 text-zt-accent text-xs font-semibold">
             <ArrowUp size={14} />
-            <span>Uploaded</span>
+            <span>{t('Uploaded')}</span>
           </div>
           <div className="text-base font-mono font-bold text-zt-text mt-1.5">
             {formatBytes(trafficStats.totalUploaded)}
           </div>
-          <span className="text-[10px] text-zt-text-faint">Total session bytes</span>
+          <span className="text-[10px] text-zt-text-faint">{t('Total session bytes')}</span>
         </div>
       </div>
 
@@ -129,7 +130,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
       <div className="p-3 rounded-2xl bg-zt-surface border border-zt-border flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2 text-xs font-medium text-zt-text">
           <Clock size={15} className="text-amber-500" />
-          <span>Active Tunnel Duration</span>
+          <span>{t('Active Tunnel Duration')}</span>
         </div>
         <span className="text-xs font-mono font-bold text-zt-text">
           {formatDuration(trafficStats.uptimeSeconds)}
@@ -139,7 +140,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
       {/* Grouped Tunnel Info */}
       <div>
         <span className="text-[11px] font-semibold text-zt-text-faint uppercase tracking-wider px-1 mb-1.5 block">
-          Tunnel Details
+          {t('Tunnel Details')}
         </span>
         <div className="rounded-2xl bg-zt-surface border border-zt-border p-3 text-xs space-y-2 font-mono shadow-sm">
           <div className="flex justify-between">

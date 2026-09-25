@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as QRCode from 'qrcode';
 import { X, Copy, Check, QrCode } from 'lucide-react';
 import { ProxyConfig } from '../types';
+import { t } from '../i18n';
 
 interface ShareModalProps {
   config: ProxyConfig | null;
@@ -89,7 +90,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ config, isOpen, onClose 
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-zt-border">
-          <h2 className="text-sm font-bold text-zt-text">Share Server Config</h2>
+          <h2 className="text-sm font-bold text-zt-text">{t('Share Server Config')}</h2>
           <button
             onClick={onClose}
             className="w-7 h-7 rounded-full flex items-center justify-center text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors"
@@ -111,7 +112,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ config, isOpen, onClose 
           </div>
 
           <p className="text-xs text-zt-text-muted mt-3">
-            Scan from ZeroTrace Mobile or copy the encrypted link below
+            {t('Scan from ZeroTrace Mobile or copy the encrypted link below')}
           </p>
 
           <div className="mt-3 w-full p-2.5 rounded-xl bg-zt-surface-2 border border-zt-border text-[11px] font-mono text-zt-text-muted break-all max-h-20 overflow-y-auto select-all">
@@ -129,7 +130,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ config, isOpen, onClose 
             }`}
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Copied to Clipboard!' : 'Copy Link'}</span>
+            <span>{copied ? t('Copied to Clipboard!') : t('Copy Link')}</span>
           </button>
         </div>
       </div>

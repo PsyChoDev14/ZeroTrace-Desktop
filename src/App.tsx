@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { Navigation, NavTab } from './components/Navigation';
 import { HomeScreen } from './screens/HomeScreen';
@@ -14,6 +14,8 @@ import { ShareModal } from './components/ShareModal';
 import { UpdateModal } from './components/UpdateModal';
 import { AppSettings, DiagnosticLog, ProxyConfig, SubscriptionInfo, TrafficStats, UserProfile, VpnState } from './types';
 import { api, isTauri } from './utils/tauriBridge';
+import { Lang, getLang, setLang, t } from './i18n';
+import { planAlerts } from './utils/planAlerts';
 import { checkForAppUpdate, AppUpdateInfo } from './utils/updater';
 import {
   PendingLogin,
@@ -58,6 +60,15 @@ export function App() {
     theme: 'dark',
   });
   const [logs, setLogs] = useState<DiagnosticLog[]>([]);
+
+  const [lang, setLangState] = useState<Lang>(getLang);
+  const handleLanguageChange = useCallback((next: Lang) => {
+    setLang(next);
+    setLangState(next);
+  }, []);
+
+  // Plan alerts (expiring / nearly out of data) shown on Home; dismissals last for the session.
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => new Set());
 
   // Account / OAuth login state
   const [account, setAccount] = useState<UserProfile | null>(null);
@@ -403,7 +414,7 @@ export function App() {
         setSessionPresent(false);
         setAccountError(err.message);
       } else {
-        setAccountError(err instanceof Error ? err.message : 'Failed to load account');
+        setAccountError(err instanceof Error ? err.message : t('Failed to load account'));
       }
     } finally {
       setAccountLoading(false);
@@ -416,7 +427,7 @@ export function App() {
     try {
       pendingLoginRef.current = await startLogin();
     } catch (err) {
-      setAccountError(err instanceof Error ? err.message : 'Could not open sign-in page');
+      setAccountError(err instanceof Error ? err.message : t('Could not open sign-in page'));
       setAccountLoading(false);
     }
   }, []);
@@ -458,7 +469,7 @@ export function App() {
     const pending = pendingLoginRef.current;
     if (!code || !state || !pending || state !== pending.state) {
       console.error('[Auth] Ignoring deep link callback: missing or mismatched state');
-      setAccountError('Sign-in failed — please try again.');
+      setAccountError(t('Sign-in failed — please try again.'));
       setAccountLoading(false);
       return;
     }
@@ -468,7 +479,7 @@ export function App() {
       setSessionPresent(true);
       await refreshAccount();
     } catch (err) {
-      setAccountError(err instanceof Error ? err.message : 'Sign-in failed');
+      setAccountError(err instanceof Error ? err.message : t('Sign-in failed'));
       setAccountLoading(false);
     }
   }, [refreshAccount]);
@@ -504,11 +515,16 @@ export function App() {
     };
   }, [handleDeepLinkUrls]);
 
+  const alerts = useMemo(
+    () => planAlerts(subscriptions).filter(a => !dismissedAlerts.has(a.key)),
+    [subscriptions, dismissedAlerts],
+  );
+
   // Launch gate: shown until signed in or the user picks "Use this device offline".
   const showLoginGate = sessionPresent === false && !account && !offlineChoice;
 
   return (
-    <div className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans theme-animated ${isLightMode ? 'theme-light' : ''}`}>
+    <div key={lang} className={`flex flex-col h-screen w-screen bg-zt-bg text-zt-text select-none overflow-hidden font-sans theme-animated ${isLightMode ? 'theme-light' : ''}`}>
       {/* 1. Frameless Window Titlebar */}
       <TitleBar
         isConnected={vpnState.status === 'connected'}
@@ -549,6 +565,12 @@ export function App() {
               onNavigateToConfigs={() => setCurrentTab('servers')}
               onPing={handlePing}
               isLightMode={isLightMode}
+              alerts={alerts}
+              onOpenAccount={() => {
+                setPreviousTab(currentTab);
+                setCurrentTab('account');
+              }}
+              onDismissAlert={key => setDismissedAlerts(prev => new Set(prev).add(key))}
             />
           )}
 
@@ -581,6 +603,7 @@ export function App() {
               onSave={handleSaveSettings}
               onOpenLogs={handleOpenLogs}
               onShowUpdateModal={info => setAvailableUpdate(info)}
+              onLanguageChange={handleLanguageChange}
             />
           )}
 
@@ -628,6 +651,11 @@ export function App() {
         onAdded={newCfg => {
           setConfigs(prev => [newCfg, ...prev]);
           setSelectedId(newCfg.id);
+        }}
+        onImported={added => {
+          // Rust inserts each imported server at the front in order, so the list ends up reversed.
+          setConfigs(prev => [...added.slice().reverse(), ...prev]);
+          if (!selectedId) handleSelectConfig(added[0].id);
         }}
       />
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { VpnState } from '../types';
+import { t } from '../i18n';
 
 export const StatusPill: React.FC<{ state: VpnState }> = ({ state }) => {
   const isConnected = state.status === 'connected';
@@ -7,12 +8,12 @@ export const StatusPill: React.FC<{ state: VpnState }> = ({ state }) => {
   const isError = state.status === 'error';
 
   const label = isConnected
-    ? 'PROTECTED'
+    ? t('PROTECTED')
     : isConnecting
-    ? 'CONNECTING'
+    ? t('CONNECTING')
     : isError
-    ? 'FAILED'
-    : 'NOT PROTECTED';
+    ? t('FAILED')
+    : t('NOT PROTECTED');
 
   const dotClass = isConnected
     ? 'bg-zt-success shadow-[0_0_8px_#35C77B]'

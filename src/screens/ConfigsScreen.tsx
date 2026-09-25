@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Zap, Search, Trash2, Server } from 'lucide-react';
 import { ProxyConfig } from '../types';
 import { ServerCard } from '../components/ServerCard';
+import { t } from '../i18n';
 
 interface ConfigsScreenProps {
   configs: ProxyConfig[];
@@ -41,7 +42,7 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
       {/* 1. Decluttered Clean Header */}
       <div className="flex items-center justify-between pb-2 shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-base font-bold text-zt-text tracking-tight">Servers</h1>
+          <h1 className="text-base font-bold text-zt-text tracking-tight">{t('Servers')}</h1>
           <span className="text-[11px] font-mono text-zt-text-muted px-2 py-0.5 rounded-full bg-zt-surface border border-zt-border">
             {configs.length}
           </span>
@@ -52,10 +53,10 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
           onClick={onPingAll}
           disabled={isPingingAll || configs.length === 0}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zt-surface hover:bg-zt-surface-2 border border-zt-border hover:border-zt-border-strong text-xs font-medium text-zt-text transition-all disabled:opacity-40 cursor-pointer shadow-sm"
-          title="Test latency for all servers"
+          title={t('Test latency for all servers')}
         >
           <Zap size={13} className={`text-zt-accent ${isPingingAll ? 'animate-spin' : ''}`} />
-          <span>{isPingingAll ? 'Testing…' : 'Ping All'}</span>
+          <span>{isPingingAll ? t('Testing…') : t('Ping All')}</span>
         </button>
       </div>
 
@@ -66,7 +67,7 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search servers…"
+          placeholder={t('Search servers…')}
           className="w-full rounded-xl bg-zt-surface-2 border border-zt-border pl-9 pr-4 py-2 text-xs text-zt-text placeholder-zt-text-faint focus:outline-none focus:border-zt-accent/50 transition-colors"
         />
       </div>
@@ -90,9 +91,9 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
           <div className="h-44 flex flex-col items-center justify-center text-center text-zt-text-faint">
             <Server size={28} className="opacity-40 mb-2" />
             <p className="text-xs">
-              {searchQuery ? 'No matching servers' : 'No servers configured yet'}
+              {searchQuery ? t('No matching servers') : t('No servers configured yet')}
             </p>
-            <p className="text-[11px] text-zt-text-faint/80 mt-1">Tap the (+) button below to add one</p>
+            <p className="text-[11px] text-zt-text-faint/80 mt-1">{t('Tap the (+) button below to add one')}</p>
           </div>
         )}
       </div>
@@ -110,16 +111,16 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
             <div className="w-10 h-10 rounded-full bg-red-500/15 text-red-400 flex items-center justify-center mx-auto mb-3">
               <Trash2 size={20} />
             </div>
-            <h3 className="text-sm font-bold text-zt-text">Delete Server?</h3>
+            <h3 className="text-sm font-bold text-zt-text">{t('Delete Server?')}</h3>
             <p className="text-xs text-zt-text-muted mt-1">
-              Are you sure you want to remove this configuration?
+              {t('Are you sure you want to remove this configuration?')}
             </p>
             <div className="flex items-center gap-2 mt-4">
               <button
                 onClick={() => setConfirmDeleteId(null)}
                 className="flex-1 py-2 rounded-xl text-xs font-medium text-zt-text bg-zt-surface-2 hover:bg-zt-surface border border-zt-border transition-colors cursor-pointer"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 onClick={() => {
@@ -128,7 +129,7 @@ export const ConfigsScreen: React.FC<ConfigsScreenProps> = ({
                 }}
                 className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-600 text-white hover:bg-red-500 transition-colors cursor-pointer shadow-sm"
               >
-                Delete
+                {t('Delete')}
               </button>
             </div>
           </div>

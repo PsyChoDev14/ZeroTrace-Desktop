@@ -1,5 +1,6 @@
 import React from 'react';
 import { ProxyProtocol } from '../types';
+import { t } from '../i18n';
 
 export const ZeroTraceMark: React.FC<{ size?: number; className?: string }> = ({ size = 24, className = '' }) => (
   <svg
@@ -74,9 +75,9 @@ export const ProtocolBadge: React.FC<{ protocol: ProxyProtocol }> = ({ protocol 
 export const SyncedBadge: React.FC = () => (
   <span
     className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase border bg-blue-500/10 text-blue-400 border-blue-500/20"
-    title="Synced from your NetchSuite account"
+    title={t('Synced from your NetchSuite account')}
   >
-    Synced
+    {t('Synced')}
   </span>
 );
 

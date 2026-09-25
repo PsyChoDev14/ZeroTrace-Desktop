@@ -174,6 +174,7 @@ pub fn run() {
             ping_config,
             ping_all,
             parse_config,
+            import_subscription_url,
             get_settings,
             save_settings,
             get_logs,

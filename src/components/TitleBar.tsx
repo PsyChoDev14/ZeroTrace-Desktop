@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Minus, X, Terminal, User } from 'lucide-react';
 import { ZeroTraceWordmark } from './Icons';
 import { isTauri } from '../utils/tauriBridge';
+import { t } from '../i18n';
 
 interface TitleBarProps {
   isConnected?: boolean;
@@ -34,8 +35,8 @@ const AccountButton: React.FC<{
           ? 'border-zt-accent bg-zt-accent/20 text-zt-accent shadow-[0_0_10px_rgba(84,104,255,0.45)]'
           : 'border-zt-border-strong bg-zt-surface-2 text-zt-text-muted hover:border-zt-accent hover:text-zt-accent'
       }`}
-      title={name ? `Account — ${name}` : 'Account'}
-      aria-label="Account"
+      title={name ? t('Account — {name}', { name }) : t('Account')}
+      aria-label={t('Account')}
     >
       {avatarUrl && !failed ? (
         <img
@@ -115,8 +116,8 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
             }}
             onMouseDown={e => e.stopPropagation()}
             className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] flex items-center justify-center cursor-pointer active:brightness-75 transition-all shadow-sm outline-none focus:outline-none"
-            title="Close"
-            aria-label="Close"
+            title={t('Close')}
+            aria-label={t('Close')}
           >
             <X size={7} strokeWidth={3} className="text-[#4C0000] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           </button>
@@ -127,15 +128,15 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
             }}
             onMouseDown={e => e.stopPropagation()}
             className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123] flex items-center justify-center cursor-pointer active:brightness-75 transition-all shadow-sm outline-none focus:outline-none"
-            title="Minimize"
-            aria-label="Minimize"
+            title={t('Minimize')}
+            aria-label={t('Minimize')}
           >
             <Minus size={7} strokeWidth={3} className="text-[#4A3200] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           </button>
           <div
             className="w-3 h-3 rounded-full bg-[#27C93F]/40 border border-[#1AAB29]/40 flex items-center justify-center cursor-default opacity-50"
-            title="Zoom Disabled (Fixed Geometry)"
-            aria-label="Zoom Disabled"
+            title={t('Zoom Disabled (Fixed Geometry)')}
+            aria-label={t('Zoom Disabled')}
           />
         </div>
 
@@ -151,7 +152,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
                 ? 'bg-zt-success shadow-[0_0_8px_#35C77B]'
                 : 'bg-zt-text-faint/30'
             }`}
-            title={isConnected ? 'Connected & Protected' : 'Disconnected'}
+            title={isConnected ? t('Connected & Protected') : t('Disconnected')}
           />
         </div>
 
@@ -169,7 +170,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
               }}
               onMouseDown={e => e.stopPropagation()}
               className="w-6 h-6 flex items-center justify-center rounded-lg text-zt-text-muted hover:text-zt-accent hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
-              title="Diagnostics & Logs"
+              title={t('Diagnostics & Logs')}
             >
               <Terminal size={12} />
             </button>
@@ -197,7 +198,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
               ? 'bg-zt-success shadow-[0_0_8px_#35C77B]'
               : 'bg-zt-text-faint/30'
           }`}
-          title={isConnected ? 'Connected & Protected' : 'Disconnected'}
+          title={isConnected ? t('Connected & Protected') : t('Disconnected')}
         />
       </div>
 
@@ -215,7 +216,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
             }}
             onMouseDown={e => e.stopPropagation()}
             className="w-6 h-6 flex items-center justify-center rounded-lg text-zt-text-muted hover:text-zt-accent hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
-            title="Diagnostics & Logs"
+            title={t('Diagnostics & Logs')}
           >
             <Terminal size={12} />
           </button>
@@ -228,7 +229,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
           }}
           onMouseDown={e => e.stopPropagation()}
           className="w-6 h-6 flex items-center justify-center rounded text-zt-text-muted hover:text-zt-text hover:bg-zt-surface-2 transition-colors cursor-pointer outline-none focus:outline-none"
-          title="Minimize"
+          title={t('Minimize')}
         >
           <Minus size={12} />
         </button>
@@ -239,7 +240,7 @@ const TitleBarComponent: React.FC<TitleBarProps> = ({
           }}
           onMouseDown={e => e.stopPropagation()}
           className="w-6 h-6 flex items-center justify-center rounded text-zt-text-muted hover:text-white hover:bg-red-500 transition-colors cursor-pointer outline-none focus:outline-none"
-          title="Close"
+          title={t('Close')}
         >
           <X size={12} />
         </button>

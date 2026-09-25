@@ -3,6 +3,7 @@ import { Globe, MoreVertical, Check, Edit2, Share2, Trash2 } from 'lucide-react'
 import { ProxyConfig } from '../types';
 import { ProtocolBadge, SyncedBadge } from './Icons';
 import { formatPing } from '../utils/formatters';
+import { t } from '../i18n';
 
 interface ServerCardProps {
   config: ProxyConfig;
@@ -72,7 +73,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
         <button
           onClick={onPing}
           className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-zt-surface-2 border border-zt-border hover:border-zt-border-strong text-[11px] font-mono transition-colors active:scale-95"
-          title="Click to test ping"
+          title={t('Click to test ping')}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${pingInfo.dotClass}`} />
           <span className={pingInfo.colorClass}>{pingInfo.text}</span>
@@ -98,7 +99,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                       className="flex items-center gap-2 px-3 py-2 text-zt-text hover:bg-zt-surface text-left"
                     >
                       <Edit2 size={13} />
-                      <span>Edit</span>
+                      <span>{t('Edit')}</span>
                     </button>
                   )}
                   {onShare && (
@@ -107,7 +108,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                       className="flex items-center gap-2 px-3 py-2 text-zt-text hover:bg-zt-surface text-left"
                     >
                       <Share2 size={13} />
-                      <span>Share</span>
+                      <span>{t('Share')}</span>
                     </button>
                   )}
                   {onDelete && (
@@ -116,7 +117,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({
                       className="flex items-center gap-2 px-3 py-2 text-zt-danger hover:bg-zt-danger-soft text-left"
                     >
                       <Trash2 size={13} />
-                      <span>Delete</span>
+                      <span>{t('Delete')}</span>
                     </button>
                   )}
                 </div>

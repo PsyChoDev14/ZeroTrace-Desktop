@@ -3,6 +3,7 @@ import { AlertCircle, Shield } from 'lucide-react';
 import { AppleIcon, Windows11Icon } from '../components/Icons';
 import { openExternalUrl } from '../utils/tauriBridge';
 import { CURRENT_APP_VERSION } from '../utils/updater';
+import { t } from '../i18n';
 
 interface LoginScreenProps {
   isLightMode: boolean;
@@ -18,28 +19,28 @@ interface LoginScreenProps {
 
 type Phase = 'idle' | 'loading' | 'waiting' | 'error';
 
-const COPY: Record<Phase, { heading: string; sub: string; hint: string }> = {
+const getCopy = (): Record<Phase, { heading: string; sub: string; hint: string }> => ({
   idle: {
-    heading: 'Sign in to continue',
-    sub: 'Link this device to your ZeroTrace account to sync configs and your license.',
-    hint: 'We store no browsing data. Sign-in identifies your license — nothing else.',
+    heading: t('Sign in to continue'),
+    sub: t('Link this device to your ZeroTrace account to sync configs and your license.'),
+    hint: t('We store no browsing data. Sign-in identifies your license — nothing else.'),
   },
   loading: {
-    heading: 'Opening your browser',
-    sub: 'Finish signing in with Google, then come back to this window.',
-    hint: 'We store no browsing data. Sign-in identifies your license — nothing else.',
+    heading: t('Opening your browser'),
+    sub: t('Finish signing in with Google, then come back to this window.'),
+    hint: t('We store no browsing data. Sign-in identifies your license — nothing else.'),
   },
   waiting: {
-    heading: 'Waiting for your browser',
-    sub: 'Approve the sign-in in the tab that just opened. This window continues on its own.',
-    hint: 'Nothing opened? Your default browser may be blocked by the active tunnel.',
+    heading: t('Waiting for your browser'),
+    sub: t('Approve the sign-in in the tab that just opened. This window continues on its own.'),
+    hint: t('Nothing opened? Your default browser may be blocked by the active tunnel.'),
   },
   error: {
-    heading: 'Sign-in failed',
-    sub: 'ZeroTrace could not complete the handshake with Google.',
-    hint: 'Still failing? Message support on WhatsApp and include your diagnostics log.',
+    heading: t('Sign-in failed'),
+    sub: t('ZeroTrace could not complete the handshake with Google.'),
+    hint: t('Still failing? Message support on WhatsApp and include your diagnostics log.'),
   },
-};
+});
 
 const GoogleLogo: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" style={{ flex: 'none', position: 'relative' }} aria-hidden="true">
@@ -67,7 +68,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent || '');
 
   const phase: Phase = opening ? 'loading' : loading ? 'waiting' : error ? 'error' : 'idle';
-  const copy = COPY[phase];
+  const copy = getCopy()[phase];
 
   const handleGoogle = async () => {
     if (opening) return;
@@ -253,15 +254,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <span style={{ position: 'relative', width: 16, height: 16, flex: 'none', borderRadius: '50%', border: '2px solid var(--g-spin)', borderTopColor: 'transparent', animation: 'laserSpin 1.2s linear infinite' }} />
             )}
             <span style={{ position: 'relative', fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.008em' }}>
-              {phase === 'loading' ? 'Opening browser…' : phase === 'error' ? 'Try again with Google' : 'Continue with Google'}
+              {phase === 'loading' ? t('Opening browser…') : phase === 'error' ? t('Try again with Google') : t('Continue with Google')}
             </span>
           </button>
 
           {phase === 'waiting' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 2 }}>
-              <button type="button" onClick={handleGoogle} style={linkStyle('rgb(var(--zt-accent))')}>Open the link again</button>
+              <button type="button" onClick={handleGoogle} style={linkStyle('rgb(var(--zt-accent))')}>{t('Open the link again')}</button>
               <span style={{ width: 1, height: 10, background: 'var(--glass-line)' }} />
-              <button type="button" onClick={onCancel} style={linkStyle('rgb(var(--zt-text-muted))')}>Cancel</button>
+              <button type="button" onClick={onCancel} style={linkStyle('rgb(var(--zt-text-muted))')}>{t('Cancel')}</button>
             </div>
           )}
 
@@ -274,7 +275,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               onMouseLeave={() => setGhostHover(false)}
             >
               <Shield size={13} strokeWidth={2} />
-              Use this device offline
+              {t('Use this device offline')}
             </button>
           )}
         </div>
@@ -294,7 +295,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             onClick={() => openExternalUrl('https://wa.me/94788385465')}
             style={{ ...linkStyle('rgb(var(--zt-accent))'), fontSize: 10.5 }}
           >
-            Support
+            {t('Support')}
           </button>
           <div className="flex items-center gap-1.5" style={{ color: 'rgb(var(--zt-text-muted))' }}>
             {isMac ? <AppleIcon size={11} /> : <Windows11Icon size={11} />}

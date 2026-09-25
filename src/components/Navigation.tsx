@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Globe, BarChart2, Settings, Plus } from 'lucide-react';
+import { t } from '../i18n';
 
 export type NavTab = 'home' | 'servers' | 'statistics' | 'settings' | 'logs' | 'account';
 
@@ -24,13 +25,13 @@ const NavigationComponent: React.FC<NavigationProps> = ({
   onOpenAddModal,
 }) => {
   const leftTabs: { id: NavTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'home', label: 'Home', icon: <Shield size={20} strokeWidth={2} /> },
-    { id: 'servers', label: 'Servers', icon: <Globe size={20} strokeWidth={2} />, badge: serverCount },
+    { id: 'home', label: t('Home'), icon: <Shield size={20} strokeWidth={2} /> },
+    { id: 'servers', label: t('Servers'), icon: <Globe size={20} strokeWidth={2} />, badge: serverCount },
   ];
 
   const rightTabs: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'statistics', label: 'Statistics', icon: <BarChart2 size={20} strokeWidth={2} /> },
-    { id: 'settings', label: 'Settings', icon: <Settings size={20} strokeWidth={2} /> },
+    { id: 'statistics', label: t('Statistics'), icon: <BarChart2 size={20} strokeWidth={2} /> },
+    { id: 'settings', label: t('Settings'), icon: <Settings size={20} strokeWidth={2} /> },
   ];
 
   return (
@@ -73,8 +74,8 @@ const NavigationComponent: React.FC<NavigationProps> = ({
           <button
             onClick={onOpenAddModal}
             className="w-12 h-12 rounded-full flex items-center justify-center text-white cursor-pointer bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 shadow-[0_4px_18px_rgba(37,99,235,0.55),inset_0_1px_0_rgba(255,255,255,0.4)] border border-white/20 hover:scale-108 active:scale-90 active:shadow-[0_2px_10px_rgba(37,99,235,0.4)] outline-none focus:outline-none focus:ring-0 transition-all duration-200 ease-out group"
-            title="Add Server Configuration"
-            aria-label="Add Server Configuration"
+            title={t('Add Server Configuration')}
+            aria-label={t('Add Server Configuration')}
           >
             <Plus
               size={22}

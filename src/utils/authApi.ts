@@ -1,5 +1,6 @@
 import { api } from './tauriBridge';
 import { SubscriptionInfo, UserProfile } from '../types';
+import { t } from '../i18n';
 import { generateChallenge, generateState, generateVerifier } from './pkce';
 
 // All backend calls (token exchange/refresh, subscriptions, user, revoke) happen in Rust
@@ -10,7 +11,7 @@ import { generateChallenge, generateState, generateVerifier } from './pkce';
 
 export class SessionExpiredError extends Error {
   constructor() {
-    super('Session expired, please sign in again.');
+    super(t('Session expired, please sign in again.'));
   }
 }
 

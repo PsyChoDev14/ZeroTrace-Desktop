@@ -1,8 +1,10 @@
 import React from 'react';
-import { ChevronRight, Globe, Plus, ShieldCheck, Zap } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Globe, Plus, ShieldCheck, X, Zap } from 'lucide-react';
 import { ProxyConfig, TrafficStats, VpnState } from '../types';
 import { ConnectionDial } from '../components/ConnectionDial';
 import { formatDuration, formatPing } from '../utils/formatters';
+import { PlanAlert } from '../utils/planAlerts';
+import { t } from '../i18n';
 
 interface HomeScreenProps {
   vpnState: VpnState;
@@ -13,6 +15,9 @@ interface HomeScreenProps {
   onNavigateToConfigs: () => void;
   onPing: (id: string) => void;
   isLightMode?: boolean;
+  alerts?: PlanAlert[];
+  onOpenAccount?: () => void;
+  onDismissAlert?: (key: string) => void;
 }
 
 /**
@@ -29,6 +34,9 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
   onOpenAddModal,
   onNavigateToConfigs,
   isLightMode,
+  alerts = [],
+  onOpenAccount,
+  onDismissAlert,
 }) => {
   const isConnected = vpnState.status === 'connected';
   const isConnecting = vpnState.status === 'connecting' || vpnState.status === 'stopping';
@@ -37,6 +45,18 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-4 max-w-sm mx-auto w-full select-none">
+      {alerts[0] && (
+        <div className="w-full max-w-[320px] mb-3 flex items-center gap-2 rounded-xl bg-zt-warn-soft border border-zt-warn/20 px-3 py-2 text-[11px] text-zt-warn">
+          <button type="button" onClick={onOpenAccount} className="flex-1 min-w-0 flex items-center gap-2 text-left cursor-pointer">
+            <AlertTriangle size={13} className="shrink-0" />
+            <span className="truncate">{t(alerts[0].message.text, alerts[0].message.vars)}</span>
+          </button>
+          <button type="button" onClick={() => onDismissAlert?.(alerts[0].key)} title={t('Dismiss')} aria-label={t('Dismiss')} className="shrink-0 opacity-70 hover:opacity-100 cursor-pointer">
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       {/* 1. Main Central Dial */}
       <ConnectionDial
         state={vpnState}
@@ -55,39 +75,39 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
             </div>
             <div className="flex items-center gap-1.5 text-xs text-zt-success font-medium mt-1">
               <ShieldCheck size={14} />
-              <span>Protected Tunnel Active</span>
+              <span>{t('Protected Tunnel Active')}</span>
             </div>
           </>
         ) : isConnecting ? (
           <>
             <div className="text-base font-semibold text-zt-accent tracking-tight animate-pulse">
-              Securing Tunnel…
+              {t('Securing Tunnel…')}
             </div>
             <span className="text-xs text-zt-text-muted mt-0.5">
-              Connecting to {selectedConfig?.name || 'server'}
+              {t('Connecting to {name}', { name: selectedConfig?.name || t('server') })}
             </span>
           </>
         ) : isError ? (
           <>
             <div className="text-base font-semibold text-zt-danger tracking-tight">
-              Connection Lost
+              {t('Connection Lost')}
             </div>
             <span className="text-xs text-zt-text-muted mt-0.5 max-w-[260px] text-center">
-              {vpnState.errorMessage || 'Tunnel disconnected. Direct internet active.'}
+              {vpnState.errorMessage || t('Tunnel disconnected. Direct internet active.')}
             </span>
             <span className="text-[11px] text-zt-text-faint mt-1">
-              Tap dial to reconnect
+              {t('Tap dial to reconnect')}
             </span>
           </>
         ) : (
           <>
             <div className="text-base font-semibold text-zt-text tracking-tight">
-              {selectedConfig ? 'Ready to Connect' : 'No Server Selected'}
+              {selectedConfig ? t('Ready to Connect') : t('No Server Selected')}
             </div>
             <span className="text-xs text-zt-text-faint mt-0.5">
               {selectedConfig
-                ? 'Tap dial to route traffic through ZeroTrace'
-                : 'Add a server node to begin'}
+                ? t('Tap dial to route traffic through ZeroTrace')
+                : t('Add a server node to begin')}
             </span>
           </>
         )}
@@ -133,7 +153,7 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({
                 <Plus size={15} />
               </div>
               <span className="text-xs font-medium text-zt-text-muted group-hover:text-zt-text">
-                Add Server Configuration
+                {t('Add Server Configuration')}
               </span>
             </div>
             <Zap size={14} className="text-zt-text-faint group-hover:text-zt-accent" />

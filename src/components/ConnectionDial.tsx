@@ -1,6 +1,7 @@
 import React from 'react';
 import { Power, Shield, Lock, AlertTriangle } from 'lucide-react';
 import { VpnState } from '../types';
+import { t } from '../i18n';
 
 interface ConnectionDialProps {
   state: VpnState;
@@ -207,7 +208,7 @@ const ConnectionDialComponent: React.FC<ConnectionDialProps> = ({
       <button
         onClick={onClick}
         disabled={disabled || isConnecting}
-        aria-label={isConnected ? 'Disconnect' : isConnecting ? 'Connecting…' : isError ? 'Reconnect' : 'Connect'}
+        aria-label={isConnected ? t('Disconnect') : isConnecting ? t('Connecting…') : isError ? t('Reconnect') : t('Connect')}
         className={`relative z-10 w-40 h-40 rounded-full flex flex-col items-center justify-center transition-all duration-300 group focus:outline-none ${
           disabled && !isConnecting
             ? 'opacity-50 cursor-not-allowed'
