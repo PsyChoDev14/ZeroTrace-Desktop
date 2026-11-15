@@ -87,12 +87,14 @@ pub fn run() {
             let shared_state: SharedState = Arc::new(Mutex::new(initial_context));
             app.manage(shared_state.clone());
 
-            // Auto-connect on startup with last connected config if enabled
+            // Auto-connect on startup with last connected config if enabled.
+            // Must be tauri::async_runtime::spawn: setup and tray callbacks run on the main thread outside
+            // any Tokio runtime, where tokio::spawn panics and kills the app right after the window opens.
             if settings.auto_connect {
                 let target_id = selected_id.clone().or_else(|| configs.first().map(|c| c.id.clone()));
                 if let Some(cfg_id) = target_id {
                     let state_clone = shared_state.clone();
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
                         let _ = do_connect(Some(cfg_id), state_clone).await;
                     });
@@ -128,7 +130,7 @@ pub fn run() {
                             } else {
                                 let first_id = state_arc.lock().selected_id.clone()
                                     .or_else(|| state_arc.lock().configs.first().map(|c| c.id.clone()));
-                                tokio::spawn(async move {
+                                tauri::async_runtime::spawn(async move {
                                     let _ = do_connect(first_id, state_arc).await;
                                 });
                             }
